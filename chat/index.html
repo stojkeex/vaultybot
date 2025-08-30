@@ -1,79 +1,142 @@
 <!DOCTYPE html>
-<html lang="sl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kripto Sniper Bot - Solana Edition v6.3</title>
+    <title>Vaulty Bot</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js" type="application/javascript"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body { 
+            font-family: 'Inter', sans-serif;
+            background-color: #000000;
+        }
+        .gradient-text {
+            background: linear-gradient(90deg, rgba(0, 251, 255, 1) 0%, rgba(0, 42, 250, 1) 50%, rgba(255, 0, 212, 1) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+        }
+        .gradient-bg {
+            background: linear-gradient(90deg, rgba(0, 251, 255, 1) 0%, rgba(0, 42, 250, 1) 50%, rgba(255, 0, 212, 1) 100%);
+            transition: all 0.3s ease;
+        }
+        .gradient-bg:hover {
+            box-shadow: 0 0 20px rgba(0, 251, 255, 0.5), 0 0 20px rgba(255, 0, 212, 0.5);
+        }
+        .card {
+            background-color: #111111;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         .log-entry-new { animation: fadeIn 0.5s ease-out; }
-        .stat-card { transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; }
-        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1); }
         ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #1f2937; }
-        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
-        .btn-disabled { cursor: not-allowed; background-color: #4b5563; }
+        ::-webkit-scrollbar-track { background: #111; }
+        ::-webkit-scrollbar-thumb { background: linear-gradient(45deg, rgba(0, 251, 255, 1), rgba(255, 0, 212, 1)); border-radius: 10px; }
+        .btn-disabled { cursor: not-allowed; background: #333; }
+        .network-btn {
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+            transition: all 0.3s ease;
+        }
+        .network-btn.active {
+            border-color: rgba(0, 251, 255, 0.5);
+            box-shadow: 0 0 15px rgba(0, 251, 255, 0.2);
+            color: white;
+        }
+        .tab-btn {
+            border-bottom: 2px solid transparent;
+        }
+        .tab-btn.active {
+            color: white;
+            border-bottom-color: rgba(0, 251, 255, 1);
+        }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-200">
+<body class="text-gray-200">
 
     <div class="container mx-auto max-w-7xl p-4 sm:p-6 lg:p-8 min-h-screen flex flex-col">
 
-        <div class="relative mb-8 text-center">
-            <header>
-                <h1 class="text-4xl font-bold text-white mb-2">Kripto Sniper Bot <span class="text-cyan-400">Solana v6.3</span></h1>
-                <p class="text-lg text-gray-400">Aplikacija z Integracijo Phantom Denarnice</p>
-            </header>
+        <header class="relative mb-6 text-center">
+            <h1 class="text-4xl lg:text-5xl font-bold text-white mb-2 gradient-text">Vaulty Bot</h1>
+            <p class="text-lg text-gray-400">Select a network to begin.</p>
             <div class="absolute top-0 right-0">
-                <button id="connect-wallet-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all duration-300 transform hover:scale-105">
-                    Poveži Denarnico
+                <button id="connect-wallet-btn" class="gradient-bg text-white font-bold py-2 px-4 rounded-lg shadow-md transform hover:scale-105">
+                    Connect Wallet
                 </button>
             </div>
+        </header>
+
+        <!-- NETWORK SELECTOR -->
+        <div id="network-selector" class="flex justify-center items-center space-x-2 sm:space-x-4 mb-8 p-2 bg-black/20 rounded-lg">
+             <button data-chain="solana" class="network-btn active w-full sm:w-auto text-gray-300 font-semibold py-2 px-4 rounded-lg">Solana</button>
+             <button data-chain="ethereum" class="network-btn w-full sm:w-auto text-gray-300 font-semibold py-2 px-4 rounded-lg">Ethereum</button>
+             <button data-chain="bnb" class="network-btn w-full sm:w-auto text-gray-300 font-semibold py-2 px-4 rounded-lg">BNB Chain</button>
+             <button data-chain="btc" class="network-btn w-full sm:w-auto text-gray-500 font-semibold py-2 px-4 rounded-lg cursor-not-allowed" disabled title="Bitcoin architecture is not supported for this type of bot.">Bitcoin</button>
         </div>
 
-        <!-- STATISTIKA -->
+
+        <!-- STATS -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div class="stat-card bg-gray-800 shadow-lg rounded-2xl p-6"><h3 class="text-sm font-medium text-gray-400 uppercase">Stanje Denarnice</h3><p id="wallet-balance" class="text-3xl font-bold text-white mt-2">... SOL</p></div>
-            <div class="stat-card bg-gray-800 shadow-lg rounded-2xl p-6"><h3 class="text-sm font-medium text-gray-400 uppercase">Realiziran Dobiček (PnL)</h3><p id="pnl-value" class="text-3xl font-bold text-gray-400 mt-2">+0.00 SOL</p></div>
-            <div class="stat-card bg-gray-800 shadow-lg rounded-2xl p-6"><h3 class="text-sm font-medium text-gray-400 uppercase">Opravljeni Posli</h3><p id="trade-count" class="text-3xl font-bold text-white mt-2">0</p></div>
-            <div class="stat-card bg-gray-800 shadow-lg rounded-2xl p-6"><h3 class="text-sm font-medium text-gray-400 uppercase">Uspešnost</h3><p id="win-rate" class="text-3xl font-bold text-white mt-2">N/A</p></div>
+            <div class="card rounded-2xl p-6"><h3 class="text-sm font-medium text-gray-400 uppercase">Wallet Balance</h3><p id="wallet-balance" class="text-3xl font-bold text-white mt-2">... <span id="native-symbol">SOL</span></p></div>
+            <div class="card rounded-2xl p-6"><h3 class="text-sm font-medium text-gray-400 uppercase">Realized Profit (PnL)</h3><p id="pnl-value" class="text-3xl font-bold text-gray-400 mt-2">+0.00 <span id="pnl-symbol">SOL</span></p></div>
+            <div class="card rounded-2xl p-6"><h3 class="text-sm font-medium text-gray-400 uppercase">Trades Completed</h3><p id="trade-count" class="text-3xl font-bold text-white mt-2">0</p></div>
+            <div class="card rounded-2xl p-6"><h3 class="text-sm font-medium text-gray-400 uppercase">Win Rate</h3><p id="win-rate" class="text-3xl font-bold text-white mt-2">N/A</p></div>
         </div>
 
-        <!-- NADZORNA PLOŠČA IN STANJE -->
-        <div class="bg-gray-800 shadow-lg rounded-2xl p-6 mb-8 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+        <!-- CONTROL PANEL -->
+        <div class="card rounded-2xl p-6 mb-8 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
             <div class="flex items-center space-x-4">
-                <span id="connection-status" class="text-lg font-medium text-gray-400">Pripravljen</span>
-                <div id="status-indicator" class="flex items-center space-x-2 px-4 py-2 rounded-full bg-red-500/20 text-red-300 transition-colors duration-300"><div id="status-dot" class="w-3 h-3 rounded-full bg-red-500 transition-colors duration-300"></div><span id="status-text" class="font-semibold">Ustavljen</span></div>
+                <span id="connection-status" class="text-lg font-medium text-gray-400">Ready</span>
+                <div id="status-indicator" class="flex items-center space-x-2 px-4 py-2 rounded-full bg-red-500/20 text-red-300 transition-colors duration-300"><div id="status-dot" class="w-3 h-3 rounded-full bg-red-500 transition-colors duration-300"></div><span id="status-text" class="font-semibold">Stopped</span></div>
             </div>
-            <button id="toggle-bot-btn" class="w-full sm:w-auto bg-green-600 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-all duration-300" disabled>
-                🚀 Poveži denarnico za zagon
+            <button id="toggle-bot-btn" class="w-full sm:w-auto bg-gray-600 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-all duration-300 btn-disabled" disabled>
+                🚀 Connect wallet to start
             </button>
         </div>
 
-        <!-- GLAVNA VSEBINA -->
+        <!-- MAIN CONTENT -->
         <div class="flex-grow grid grid-cols-1 lg:grid-cols-5 gap-8">
-            <main class="lg:col-span-3 flex flex-col bg-gray-800 shadow-lg rounded-2xl overflow-hidden">
-                <div class="p-6 border-b border-gray-700"><h2 class="text-2xl font-semibold text-white">Dnevnik Dogodkov</h2></div>
-                <div id="log-container" class="flex-grow p-6 space-y-4 overflow-y-auto"><div class="text-center text-gray-500 pt-10">Dnevnik je prazen. Poveži denarnico in zaženi bota.</div></div>
+            <main class="lg:col-span-3 flex flex-col card rounded-2xl overflow-hidden">
+                <div class="flex border-b border-gray-800">
+                    <button id="log-tab" class="tab-btn active px-6 py-4 text-lg font-semibold text-gray-300">Event Log</button>
+                    <button id="trading-tab" class="tab-btn px-6 py-4 text-lg font-semibold text-gray-500">Trading</button>
+                </div>
+                <div id="log-container" class="flex-grow p-6 space-y-4 overflow-y-auto"><div class="text-center text-gray-500 pt-10">Log is empty. Connect wallet and start the bot.</div></div>
+                <div id="trading-container" class="hidden flex-grow p-6 space-y-6 overflow-y-auto">
+                     <h3 class="text-xl font-semibold text-white">Manual Trade</h3>
+                     <div>
+                         <label for="token-address" class="block text-sm font-medium text-gray-400 mb-2">Token Address</label>
+                         <input type="text" id="token-address" placeholder="Paste token address here..." class="w-full bg-black/30 border border-gray-700 rounded-lg p-3 focus:ring-2 focus:ring-cyan-500 focus:outline-none text-sm">
+                     </div>
+                     <div>
+                         <label for="buy-amount" class="block text-sm font-medium text-gray-400 mb-2">Amount (<span id="buy-amount-symbol">SOL</span>)</label>
+                         <input type="number" id="buy-amount" placeholder="0.05" class="w-full bg-black/30 border border-gray-700 rounded-lg p-3 focus:ring-2 focus:ring-cyan-500 focus:outline-none text-sm">
+                     </div>
+                     <button id="manual-buy-btn" class="w-full gradient-bg text-white font-bold py-3 px-8 rounded-lg">Buy Token</button>
+                </div>
             </main>
-            <aside class="lg:col-span-2 flex flex-col bg-gray-800 shadow-lg rounded-2xl overflow-hidden">
-                <div class="p-6 border-b border-gray-700"><h2 class="text-2xl font-semibold text-white">Odprte Pozicije</h2></div>
-                <div id="positions-container" class="flex-grow p-6 overflow-y-auto"><div id="no-positions-msg" class="text-center text-gray-500 pt-10">Trenutno ni odprtih pozicij.</div></div>
+            <aside class="lg:col-span-2 flex flex-col card rounded-2xl overflow-hidden">
+                <div class="p-6 border-b border-gray-800"><h2 class="text-2xl font-semibold text-white">Open Positions</h2></div>
+                <div id="positions-container" class="flex-grow p-6 overflow-y-auto"><div id="no-positions-msg" class="text-center text-gray-500 pt-10">No open positions currently.</div></div>
             </aside>
         </div>
 
-        <footer class="text-center py-6 text-gray-500 text-sm mt-8"><p>&copy; 2025 - Samostojni Kripto Sniper Bot.</p></footer>
+        <footer class="text-center py-6 text-gray-500 text-sm mt-8"><p>&copy; 2025 - Standalone Crypto Sniper Bot.</p></footer>
     </div>
 
     <script>
-        // --- DOM ELEMENTI ---
+        // --- DOM ELEMENTS ---
         const connectWalletBtn = document.getElementById('connect-wallet-btn');
         const toggleBtn = document.getElementById('toggle-bot-btn');
         const statusIndicator = document.getElementById('status-indicator');
@@ -87,21 +150,56 @@
         const pnlValueEl = document.getElementById('pnl-value');
         const tradeCountEl = document.getElementById('trade-count');
         const winRateEl = document.getElementById('win-rate');
+        const nativeSymbolEls = [document.getElementById('native-symbol'), document.getElementById('pnl-symbol')];
+        const networkSelector = document.getElementById('network-selector');
+        const logTab = document.getElementById('log-tab');
+        const tradingTab = document.getElementById('trading-tab');
+        const tradingContainer = document.getElementById('trading-container');
+        const manualBuyBtn = document.getElementById('manual-buy-btn');
+        const tokenAddressInput = document.getElementById('token-address');
+        const buyAmountInput = document.getElementById('buy-amount');
+        const buyAmountSymbol = document.getElementById('buy-amount-symbol');
 
-        // --- KONFIGURACIJA BOTA (SOLANA) ---
-        // POPRAVEK: Spremenjen URL na https://
-        const SOLANA_NODE_URL = "https://api.mainnet-beta.solana.com";
-        const RAYDIUM_LIQUIDITY_PROGRAM_ID = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8";
-        const WSOL_ADDRESS = "So11111111111111111111111111111111111111112";
-        const BUY_AMOUNT_SOL = 0.05;
 
-        // --- STANJE APLIKACIJE ---
+        // --- CHAIN CONFIGURATIONS ---
+        const chains = {
+            solana: {
+                name: 'Solana',
+                symbol: 'SOL',
+                type: 'solana',
+                nodeUrl: 'https://api.mainnet-beta.solana.com',
+                wsUrl: 'wss://api.mainnet-beta.solana.com',
+                factoryAddress: '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8', // Raydium Liquidity Pool V4
+                chainId: null,
+            },
+            ethereum: {
+                name: 'Ethereum',
+                symbol: 'ETH',
+                type: 'evm',
+                nodeUrl: 'https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161', // Public Infura
+                wsUrl: 'wss://mainnet.infura.io/ws/v3/9aa3d95b3bc440fa88ea12eaa4456161',
+                factoryAddress: '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', // Uniswap V2 Factory
+                chainId: 1,
+            },
+            bnb: {
+                name: 'BNB Smart Chain',
+                symbol: 'BNB',
+                type: 'evm',
+                nodeUrl: 'https://bsc-dataseed.binance.org/',
+                wsUrl: 'wss://bsc-ws-node.nariox.org:443',
+                factoryAddress: '0xcA143Ce32fC7BFf22703467Fcb83841C48d88AC3', // PancakeSwap V2 Factory
+                chainId: 56,
+            }
+        };
+
+        // --- APP STATE ---
         let isRunning = false;
         let priceSimInterval;
         let connection;
-        let logsSubscriptionId;
-        let phantomProvider;
+        let subscriptionId;
+        let provider;
         let userAddress;
+        let selectedChain = 'solana';
         
         let state = {
             walletBalance: 0.0,
@@ -111,48 +209,48 @@
             positions: new Map()
         };
 
-        // --- FUNKCIJE ZA PRIKAZ (UI) ---
+        // --- UI FUNCTIONS ---
         function formatNumber(num) { return (typeof num === 'number') ? num.toFixed(4) : '0.0000'; }
 
         function updateStats() {
-            if (!userAddress) {
-                walletBalanceEl.textContent = '... SOL';
-                pnlValueEl.textContent = '+0.00 SOL';
-                tradeCountEl.textContent = '0';
-                winRateEl.textContent = 'N/A';
-                return;
-            }
-            walletBalanceEl.textContent = `${formatNumber(state.walletBalance)} SOL`;
-            pnlValueEl.textContent = `${state.pnl >= 0 ? '+' : ''}${formatNumber(state.pnl)} SOL`;
+            const symbol = chains[selectedChain].symbol;
+            walletBalanceEl.innerHTML = `${userAddress ? formatNumber(state.walletBalance) : '...'} <span id="native-symbol">${symbol}</span>`;
+            pnlValueEl.innerHTML = `${state.pnl >= 0 ? '+' : ''}${formatNumber(state.pnl)} <span id="pnl-symbol">${symbol}</span>`;
             pnlValueEl.className = `text-3xl font-bold mt-2 ${state.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`;
             tradeCountEl.textContent = state.trades;
-            if (state.trades > 0) {
-                const rate = (state.wins / state.trades) * 100;
-                winRateEl.textContent = `${rate.toFixed(1)}%`;
-            } else {
-                winRateEl.textContent = 'N/A';
-            }
+            winRateEl.textContent = state.trades > 0 ? `${((state.wins / state.trades) * 100).toFixed(1)}%` : 'N/A';
+            buyAmountSymbol.textContent = symbol;
         }
 
         function renderPositions() {
+            const symbol = chains[selectedChain].symbol;
             if (state.positions.size === 0) {
                 noPositionsMsg.style.display = 'block';
                 positionsContainer.innerHTML = '';
                 positionsContainer.appendChild(noPositionsMsg);
-                noPositionsMsg.textContent = 'Trenutno ni odprtih pozicij.';
+                noPositionsMsg.textContent = 'No open positions currently.';
                 return;
             }
             noPositionsMsg.style.display = 'none';
             positionsContainer.innerHTML = '';
-
             for (const [address, pos] of state.positions.entries()) {
                 const pnl = (pos.currentValue - pos.buyValue);
-                const pnlPercent = (pnl / pos.buyValue) * 100;
+                const pnlPercent = (pos.buyValue > 0) ? (pnl / pos.buyValue) * 100 : 0;
                 const pnlColor = pnl >= 0 ? 'text-green-400' : 'text-red-400';
-
                 const positionCard = document.createElement('div');
-                positionCard.className = 'bg-gray-700/50 p-4 rounded-lg mb-4';
-                positionCard.innerHTML = `<div class="flex justify-between items-center mb-2"><h4 class="font-bold text-white truncate" title="${address}">${pos.symbol}</h4><span class="font-mono text-sm ${pnlColor}">${pnl >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%</span></div><div class="font-mono text-xs text-gray-400 space-y-1"><p><strong>Vrednost:</strong> ${formatNumber(pos.currentValue)} SOL</p><p><strong>PnL:</strong> <span class="${pnlColor}">${pnl >= 0 ? '+' : ''}${formatNumber(pnl)} SOL</span></p></div>`;
+                positionCard.className = 'bg-black/30 p-4 rounded-lg mb-4 border border-gray-800';
+                positionCard.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="font-bold text-white truncate" title="${address}">${pos.symbol}</h4>
+                            <span class="font-mono text-xs text-gray-500">${address.substring(0,10)}...</span>
+                        </div>
+                        <button data-address="${address}" class="sell-btn bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-3 rounded-md transition-transform transform hover:scale-105">Sell</button>
+                    </div>
+                    <div class="font-mono text-sm text-gray-400 space-y-1 mt-3">
+                        <div class="flex justify-between"><span>Value:</span> <span class="text-white">${formatNumber(pos.currentValue)} ${symbol}</span></div>
+                        <div class="flex justify-between"><span>PnL:</span> <span class="${pnlColor}">${pnl >= 0 ? '+' : ''}${formatNumber(pnl)} ${symbol} (${pnlPercent.toFixed(2)}%)</span></div>
+                    </div>`;
                 positionsContainer.appendChild(positionCard);
             }
         }
@@ -160,31 +258,32 @@
         function logEntry(message, type = 'system', data = {}) {
             if (logContainer.querySelector('.text-gray-500')) logContainer.innerHTML = '';
             const entry = document.createElement('div');
-            entry.className = 'p-4 rounded-lg log-entry-new font-mono text-sm';
-            const timestamp = new Date().toLocaleTimeString('sl-SI');
+            entry.className = 'p-4 rounded-lg log-entry-new font-mono text-sm border';
+            const timestamp = new Date().toLocaleTimeString('en-US');
             let content = '', header = '';
             const typeClasses = {
-                system: { bg: 'bg-blue-500/10', text: 'text-blue-300', tag: 'SISTEM' },
-                wallet: { bg: 'bg-cyan-500/10', text: 'text-cyan-300', tag: 'DENARNICA' },
-                pair: { bg: 'bg-gray-700/50', text: 'text-gray-300', tag: 'NOV PAR' },
-                buy: { bg: 'bg-green-500/10', text: 'text-green-300', tag: 'NAKUP' },
-                sell: { bg: 'bg-indigo-500/10', text: 'text-indigo-300', tag: 'PRODAJA' },
-                error: { bg: 'bg-red-500/10', text: 'text-red-300', tag: 'NAPAKA' }
+                system: { border: 'border-blue-500/30', bg: 'bg-blue-500/10', text: 'text-blue-300', tag: 'SYSTEM' },
+                wallet: { border: 'border-cyan-500/30', bg: 'bg-cyan-500/10', text: 'text-cyan-300', tag: 'WALLET' },
+                pair:   { border: 'border-gray-500/30', bg: 'bg-gray-500/10', text: 'text-gray-300', tag: 'NEW PAIR' },
+                buy:    { border: 'border-green-500/30', bg: 'bg-green-500/10', text: 'text-green-300', tag: 'BUY' },
+                sell:   { border: 'border-indigo-500/30', bg: 'bg-indigo-500/10', text: 'text-indigo-300', tag: 'SELL' },
+                error:  { border: 'border-red-500/30', bg: 'bg-red-500/10', text: 'text-red-300', tag: 'ERROR' }
             };
             const c = typeClasses[type] || typeClasses.system;
-            entry.classList.add(c.bg);
-            header = `<span class="text-xs font-bold px-2 py-1 rounded-full ${c.bg.replace('/10','/20')} ${c.text}">${c.tag}</span>`;
+            entry.classList.add(c.bg, c.border);
+            header = `<span class="text-xs font-bold px-2 py-1 rounded-full ${c.bg} ${c.text}">${c.tag}</span>`;
             
+            const symbol = chains[selectedChain].symbol;
             switch(type) {
                 case 'system': content = `<span class="font-semibold">${message}</span>`; break;
-                case 'wallet': content = `<span class="font-semibold">${message}</span><p class="text-xs text-gray-500 break-all mt-1">Naslov: ${data.address}</p>`; break;
+                case 'wallet': content = `<span class="font-semibold">${message}</span><p class="text-xs text-gray-500 break-all mt-1">Address: ${data.address}</p>`; break;
                 case 'pair':
-                    content = `<p class="mb-2"><strong>Zaznan nov likvidnostni par na Raydiumu!</strong></p><p class="text-xs text-gray-500 break-all">Signature: ${data.signature.substring(0, 30)}...</p>`;
+                    content = `<p class="mb-2"><strong>New liquidity pool detected on ${chains[selectedChain].name}!</strong></p><p class="text-xs text-gray-500 break-all">Details: ${data.details.substring(0, 40)}...</p>`;
                     break;
-                case 'buy': content = `<p class="mb-1"><strong>Kovanec:</strong> <span class="text-cyan-400">${data.symbol} (${data.address.substring(0,10)}...)</span></p><p><strong>Znesek:</strong> ${formatNumber(data.amount)} SOL</p>`; break;
+                case 'buy': content = `<p class="mb-1"><strong>Token:</strong> <span class="text-cyan-400">${data.symbol} (${data.address.substring(0,10)}...)</span></p><p><strong>Amount:</strong> ${formatNumber(data.amount)} ${symbol}</p>`; break;
                 case 'sell':
                     const pnlColor = data.pnl >= 0 ? 'text-green-400' : 'text-red-400';
-                    content = `<p class="mb-1"><strong>Kovanec:</strong> <span class="text-cyan-400">${data.symbol}</span></p><p><strong>Dobiček/Izguba:</strong> <span class="${pnlColor}">${data.pnl >= 0 ? '+' : ''}${formatNumber(data.pnl)} SOL</span></p>`;
+                    content = `<p class="mb-1"><strong>Token:</strong> <span class="text-cyan-400">${data.symbol}</span></p><p><strong>Profit/Loss:</strong> <span class="${pnlColor}">${data.pnl >= 0 ? '+' : ''}${formatNumber(data.pnl)} ${symbol}</span></p>`;
                     break;
                 case 'error': content = `<span class="font-semibold text-red-400">${message}</span>`; break;
             }
@@ -195,89 +294,101 @@
         
         function updateBotStatus(running) {
             isRunning = running;
+            toggleBtn.className = 'w-full sm:w-auto text-white font-bold py-3 px-8 rounded-lg shadow-md transition-all duration-300 transform hover:scale-105';
             if (isRunning) {
                 statusIndicator.className = 'flex items-center space-x-2 px-4 py-2 rounded-full bg-green-500/20 text-green-300';
                 statusDot.className = 'w-3 h-3 rounded-full bg-green-500 animate-pulse';
-                statusText.textContent = 'Deluje';
-                toggleBtn.innerHTML = '🛑 Ustavi Bota';
-                toggleBtn.className = 'w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-all duration-300 transform hover:scale-105';
+                statusText.textContent = 'Running';
+                toggleBtn.innerHTML = '🛑 Stop Bot';
+                toggleBtn.classList.add('bg-red-600', 'hover:bg-red-700');
             } else {
                 statusIndicator.className = 'flex items-center space-x-2 px-4 py-2 rounded-full bg-red-500/20 text-red-300';
                 statusDot.className = 'w-3 h-3 rounded-full bg-red-500';
-                statusText.textContent = 'Ustavljen';
-                toggleBtn.innerHTML = userAddress ? '🚀 Zaženi Bota' : '🚀 Poveži denarnico za zagon';
-                toggleBtn.className = userAddress ? 'w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-all duration-300 transform hover:scale-105' : 'w-full sm:w-auto bg-gray-600 text-white font-bold py-3 px-8 rounded-lg shadow-md btn-disabled';
+                statusText.textContent = 'Stopped';
+                if (userAddress) {
+                    toggleBtn.innerHTML = '🚀 Start Bot';
+                    toggleBtn.classList.add('gradient-bg');
+                    toggleBtn.classList.remove('bg-gray-600', 'btn-disabled');
+                    toggleBtn.disabled = false;
+                } else {
+                    toggleBtn.innerHTML = '🚀 Connect wallet to start';
+                    toggleBtn.classList.add('bg-gray-600', 'btn-disabled');
+                    toggleBtn.classList.remove('gradient-bg');
+                    toggleBtn.disabled = true;
+                }
             }
         }
         
-        // --- LOGIKA BOTA ---
+        // --- BOT LOGIC ---
         function simulatePriceChangesAndSells() {
             if (!isRunning || state.positions.size === 0) return;
             const positionsToSell = [];
             for (const [address, pos] of state.positions.entries()) {
-                const change = (Math.random() - 0.48) * 0.2;
-                pos.currentValue *= (1 + change);
+                pos.currentValue *= (1 + (Math.random() - 0.48) * 0.2); // Price fluctuation
                 const pnl = pos.currentValue - pos.buyValue;
-                if (pnl > pos.buyValue * 0.5 || pnl < -pos.buyValue * 0.25) {
+                if (pnl > pos.buyValue * 0.5 || pnl < -pos.buyValue * 0.25) { // Take profit / Stop loss
                     positionsToSell.push(address);
                 }
             }
             if (positionsToSell.length > 0) {
-                for (const address of positionsToSell) {
-                    const pos = state.positions.get(address);
-                    const pnl = pos.currentValue - pos.buyValue;
-                    state.walletBalance += pos.currentValue;
-                    state.pnl += pnl;
-                    state.trades++;
-                    if (pnl > 0) state.wins++;
-                    logEntry('', 'sell', { symbol: pos.symbol, pnl: pnl });
-                    state.positions.delete(address);
-                }
+                positionsToSell.forEach(address => manualSell(address, true)); // Pass true for auto-sell
+            }
+            renderPositions(); // Render after price updates
+        }
+        
+        function simulateBuy(details) {
+            const buyAmount = 0.05; // Universal buy amount for simulation
+            if (state.walletBalance >= buyAmount) {
+                const placeholderAddress = details;
+                const symbol = chains[selectedChain].symbol + "COIN" + Math.floor(Math.random() * 9000 + 1000);
+                state.walletBalance -= buyAmount;
+                state.positions.set(placeholderAddress, { symbol, buyValue: buyAmount, currentValue: buyAmount });
+                logEntry(`Auto-bought ${symbol}`, 'buy', { symbol, address: placeholderAddress, amount: buyAmount });
                 updateStats();
                 renderPositions();
             }
         }
 
-        function handleNewLog(logInfo, context) {
-            const signature = logInfo.signature;
-            const logMessages = logInfo.logs.join(' ');
-            if (logMessages.includes("initialize2")) {
-                 logEntry('', 'pair', { signature });
-                if (Math.random() < 0.1 && state.walletBalance >= BUY_AMOUNT_SOL) {
-                    const placeholderAddress = signature.substring(0, 20);
-                    const symbol = "SOLCOIN" + Math.floor(Math.random() * 9000 + 1000);
-                    state.walletBalance -= BUY_AMOUNT_SOL;
-                    state.positions.set(placeholderAddress, { symbol: symbol, buyValue: BUY_AMOUNT_SOL, currentValue: BUY_AMOUNT_SOL });
-                    logEntry('', 'buy', { symbol: symbol, address: placeholderAddress, amount: BUY_AMOUNT_SOL });
-                    updateStats();
-                    renderPositions();
-                }
-            }
-        }
-
         async function startBot() {
             if (isRunning || !userAddress) return;
+            const chainConfig = chains[selectedChain];
             updateBotStatus(true);
-            logEntry('Bot se zaganja...', 'system');
+            logEntry(`Starting bot on ${chainConfig.name}...`, 'system');
             try {
-                connectionStatusEl.textContent = 'Povezujem z verigo...';
+                connectionStatusEl.textContent = 'Connecting to blockchain...';
                 connectionStatusEl.className = 'text-lg font-medium text-yellow-400';
-                connection = new solanaWeb3.Connection(SOLANA_NODE_URL, 'confirmed');
-                logEntry(`Povezan na Solana Mainnet`, 'system');
-                connectionStatusEl.textContent = 'Povezan na verigo';
-                connectionStatusEl.className = 'text-lg font-medium text-green-400';
                 
-                logsSubscriptionId = connection.onLogs(
-                    new solanaWeb3.PublicKey(RAYDIUM_LIQUIDITY_PROGRAM_ID),
-                    handleNewLog,
-                    'confirmed'
-                );
+                if (chainConfig.type === 'solana') {
+                    connection = new solanaWeb3.Connection(chainConfig.wsUrl, 'confirmed');
+                    subscriptionId = connection.onLogs(
+                        new solanaWeb3.PublicKey(chainConfig.factoryAddress),
+                        (logInfo) => {
+                             if (logInfo.logs.join(' ').includes("initialize2")) {
+                                logEntry('', 'pair', { details: logInfo.signature });
+                                if (Math.random() < 0.1) simulateBuy(logInfo.signature);
+                            }
+                        },
+                        'confirmed'
+                    );
+                } else if (chainConfig.type === 'evm') {
+                    connection = new ethers.providers.WebSocketProvider(chainConfig.wsUrl);
+                    const factoryContract = new ethers.Contract(chainConfig.factoryAddress, ["event PairCreated(address indexed token0, address indexed token1, address pair, uint)"], connection);
+                    factoryContract.on("PairCreated", (token0, token1, pairAddress) => {
+                        logEntry('', 'pair', { details: pairAddress });
+                        if (Math.random() < 0.1) simulateBuy(pairAddress);
+                    });
+                    subscriptionId = factoryContract; // Store contract to remove listener later
+                }
 
+                logEntry(`Connected to ${chainConfig.name} Mainnet`, 'system');
+                connectionStatusEl.textContent = 'Connected to Blockchain';
+                connectionStatusEl.className = 'text-lg font-medium text-green-400';
                 priceSimInterval = setInterval(simulatePriceChangesAndSells, 5000);
+
             } catch(e) {
-                console.error("Napaka pri zagonu bota:", e);
-                logEntry(`Napaka pri povezovanju na verigo: ${e.message}`, 'error');
-                connectionStatusEl.textContent = 'Napaka pri povezavi';
+                console.error("Bot start error:", e);
+                logEntry(`Error connecting to blockchain: ${e.message}`, 'error');
+                connectionStatusEl.textContent = 'Connection Error';
                 connectionStatusEl.className = 'text-lg font-medium text-red-400';
                 updateBotStatus(false);
             }
@@ -285,127 +396,237 @@
 
         async function stopBot() {
             if (!isRunning) return;
-            logEntry('Bot je bil ustavljen.', 'system');
-            if (logsSubscriptionId && connection) {
-                await connection.removeOnLogsListener(logsSubscriptionId);
+            logEntry('Bot has been stopped.', 'system');
+            if (subscriptionId) {
+                if (selectedChain === 'solana' && connection) {
+                    await connection.removeOnLogsListener(subscriptionId);
+                } else if (chains[selectedChain].type === 'evm') {
+                    subscriptionId.removeAllListeners();
+                    if(connection && connection.destroy) connection.destroy(); // Ethers ws provider
+                }
             }
             clearInterval(priceSimInterval);
-            connection = null;
-            logsSubscriptionId = null;
-            priceSimInterval = null;
-            connectionStatusEl.textContent = 'Pripravljen';
+            connection = subscriptionId = priceSimInterval = null;
+            connectionStatusEl.textContent = 'Ready';
             connectionStatusEl.className = 'text-lg font-medium text-gray-400';
             updateBotStatus(false);
         }
 
         function toggleBot() {
-            if (isRunning) stopBot();
-            else startBot();
+            if (isRunning) stopBot(); else startBot();
+        }
+        
+        // --- MANUAL TRADING ---
+        function handleManualBuy() {
+            if (!userAddress) {
+                logEntry('Connect your wallet first to trade.', 'error');
+                return;
+            }
+            const address = tokenAddressInput.value.trim();
+            const amount = parseFloat(buyAmountInput.value);
+
+            if (!address) { logEntry('Token address is required.', 'error'); return; }
+            if (isNaN(amount) || amount <= 0) { logEntry('Please enter a valid amount.', 'error'); return; }
+            if (amount > state.walletBalance) { logEntry('Insufficient balance.', 'error'); return; }
+            
+            const symbol = "Manual-" + address.substring(0, 6);
+            state.walletBalance -= amount;
+            state.positions.set(address, { symbol, buyValue: amount, currentValue: amount });
+            
+            logEntry(`Manually bought ${symbol}`, 'buy', { symbol, address: address, amount: amount });
+            
+            tokenAddressInput.value = '';
+            buyAmountInput.value = '';
+
+            updateStats();
+            renderPositions();
         }
 
-        // --- LOGIKA DENARNICE (PHANTOM) ---
-        const getProvider = () => {
-            // Modern standard: window.solana
-            if ('solana' in window && window.solana?.isPhantom) {
-                return window.solana;
-            }
-            // Older standard: window.phantom
-            if ('phantom' in window && window.phantom?.solana?.isPhantom) {
-                return window.phantom.solana;
+        function manualSell(address, isAutoSell = false) {
+             if (!state.positions.has(address)) return;
+
+            const pos = state.positions.get(address);
+            const pnl = pos.currentValue - pos.buyValue;
+
+            state.walletBalance += pos.currentValue;
+            state.pnl += pnl;
+            state.trades++;
+            if (pnl > 0) state.wins++;
+            
+            const sellMsg = isAutoSell ? `Auto-sold ${pos.symbol}` : `Manually sold ${pos.symbol}`;
+            logEntry(sellMsg, 'sell', { symbol: pos.symbol, pnl: pnl });
+
+            state.positions.delete(address);
+
+            updateStats();
+            renderPositions();
+        }
+
+
+        // --- WALLET LOGIC ---
+        function getProvider() {
+            if (selectedChain === 'solana') {
+                 return ('solana' in window && window.solana?.isPhantom) ? window.solana : null;
+            } else if (chains[selectedChain].type === 'evm') {
+                return ('ethereum' in window) ? window.ethereum : null;
             }
             return null;
-        };
+        }
 
         async function connectWallet() {
-            phantomProvider = getProvider();
-            if (!phantomProvider) {
-                const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-                if (/android|iphone|ipad|ipod/i.test(userAgent)) {
-                     logEntry("Mobilne naprave zahtevajo uporabo brskalnika znotraj Phantom aplikacije.", 'error');
-                } else {
-                     logEntry("Phantom denarnica ni zaznana. Preverite, ali je nameščena in aktivna. Včasih brskalniki (npr. Brave) blokirajo denarnice. Poskusite z drugim brskalnikom ali osvežite stran.", 'error');
-                     setTimeout(() => window.open("https://phantom.app/", "_blank"), 1000);
-                }
+            provider = getProvider();
+            if (!provider) {
+                const walletName = selectedChain === 'solana' ? 'Phantom' : 'MetaMask';
+                logEntry(`${walletName} wallet not found. Please install it.`, 'error');
+                const installUrl = selectedChain === 'solana' ? 'https://phantom.app/' : 'https://metamask.io/';
+                setTimeout(() => window.open(installUrl, "_blank"), 1000);
                 return;
             }
             try {
-                const resp = await phantomProvider.connect({ onlyIfTrusted: true });
-                userAddress = resp.publicKey.toString();
+                if (selectedChain === 'solana') {
+                    const resp = await provider.connect({ onlyIfTrusted: false });
+                    userAddress = resp.publicKey.toString();
+                } else { // EVM
+                    const accounts = await provider.request({ method: 'eth_requestAccounts' });
+                    userAddress = accounts[0];
+                    const networkId = await provider.request({ method: 'net_version' });
+                    if (parseInt(networkId) !== chains[selectedChain].chainId) {
+                        logEntry(`Please switch to ${chains[selectedChain].name} in MetaMask.`, 'error');
+                        userAddress = null; // Prevent further actions
+                        return;
+                    }
+                }
                 await updateWalletInfo();
                 setupWalletListeners();
-            } catch (errOnSilent) {
-                // If silent connection fails, try to connect by prompting the user
-                 try {
-                    const resp = await phantomProvider.connect();
-                    userAddress = resp.publicKey.toString();
-                    await updateWalletInfo();
-                    setupWalletListeners();
-                } catch (err) {
-                    console.error("Napaka pri povezovanju denarnice:", err);
-                    logEntry(`Povezava z denarnico neuspešna: ${err.message}`, 'error');
-                }
+            } catch (err) {
+                console.error("Wallet connection error:", err);
+                logEntry(`Wallet connection failed: ${err.message}`, 'error');
             }
         }
 
         async function updateWalletInfo() {
             if (!userAddress) return;
-            
+            const chainConfig = chains[selectedChain];
             try {
-                // POPRAVEK: Odstranjen .replace(), ker SOLANA_NODE_URL že uporablja https
-                const tempConnection = new solanaWeb3.Connection(SOLANA_NODE_URL, 'confirmed');
-                const balance = await tempConnection.getBalance(new solanaWeb3.PublicKey(userAddress));
-                state.walletBalance = balance / solanaWeb3.LAMPORTS_PER_SOL;
+                if (chainConfig.type === 'solana') {
+                     const tempConnection = new solanaWeb3.Connection(chainConfig.nodeUrl, 'confirmed');
+                     const balance = await tempConnection.getBalance(new solanaWeb3.PublicKey(userAddress));
+                     state.walletBalance = balance / solanaWeb3.LAMPORTS_PER_SOL;
+                } else { // EVM
+                    const tempProvider = new ethers.providers.JsonRpcProvider(chainConfig.nodeUrl);
+                    const balance = await tempProvider.getBalance(userAddress);
+                    state.walletBalance = parseFloat(ethers.utils.formatEther(balance));
+                }
             } catch (error) {
-                console.warn("Napaka pri pridobivanju stanja denarnice (verjetno 0 SOL):", error);
-                logEntry("Stanje ni bilo mogoče pridobiti. Nastavljeno na 0 SOL.", 'wallet', { address: userAddress });
+                console.warn("Could not fetch balance (likely 0):", error);
+                logEntry("Could not fetch balance. Assuming 0.", 'wallet', { address: userAddress });
                 state.walletBalance = 0.0;
             }
-            
             connectWalletBtn.textContent = `${userAddress.substring(0, 4)}...${userAddress.substring(userAddress.length - 4)}`;
-            connectWalletBtn.className = 'bg-gray-700 text-gray-300 font-mono py-2 px-4 rounded-lg';
-            
-            toggleBtn.disabled = false;
-            toggleBtn.textContent = '🚀 Zaženi Bota';
-            toggleBtn.className = 'w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-all duration-300 transform hover:scale-105';
-
-            logEntry('Denarnica uspešno povezana.', 'wallet', {address: userAddress});
+            connectWalletBtn.className = 'bg-gray-800 text-gray-300 font-mono py-2 px-4 rounded-lg border border-gray-700';
+            logEntry('Wallet connected successfully.', 'wallet', {address: userAddress});
             updateStats();
+            updateBotStatus(false);
         }
         
         function setupWalletListeners() {
-            if(phantomProvider) {
-                phantomProvider.on('accountChanged', (publicKey) => {
-                    if (publicKey) {
+            if(!provider) return;
+            const handleDisconnect = () => {
+                logEntry('Wallet disconnected.', 'error');
+                if (provider && provider.removeAllListeners) provider.removeAllListeners();
+                userAddress = null;
+                provider = null;
+                stopBot();
+                connectWalletBtn.textContent = 'Connect Wallet';
+                connectWalletBtn.className = 'gradient-bg text-white font-bold py-2 px-4 rounded-lg shadow-md transform hover:scale-105';
+                updateBotStatus(false);
+                updateStats();
+            }
+            if (selectedChain === 'solana') {
+                 provider.on('disconnect', handleDisconnect);
+                 provider.on('accountChanged', (publicKey) => {
+                     if(publicKey) {
                         userAddress = publicKey.toString();
-                        logEntry('Račun v denarnici zamenjan.', 'wallet', {address: userAddress});
+                        logEntry('Wallet account changed.', 'wallet', {address: userAddress});
+                        updateWalletInfo();
+                     } else {
+                         handleDisconnect();
+                     }
+                 });
+            } else { // EVM
+                provider.on('accountsChanged', (accounts) => {
+                    if (accounts.length > 0) {
+                        userAddress = accounts[0];
+                        logEntry('Wallet account changed.', 'wallet', {address: userAddress});
                         updateWalletInfo();
                     } else {
-                        logEntry('Povezava z denarnico prekinjena.', 'error');
-                        userAddress = null;
-                        stopBot();
-                        connectWalletBtn.textContent = 'Poveži Denarnico';
-                        connectWalletBtn.className = 'bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-all duration-300 transform hover:scale-105';
-                        toggleBtn.disabled = true;
-                        toggleBtn.textContent = '🚀 Poveži denarnico za zagon';
-                        toggleBtn.className = 'w-full sm:w-auto bg-gray-600 text-white font-bold py-3 px-8 rounded-lg shadow-md btn-disabled';
-                         updateStats();
+                        handleDisconnect();
                     }
+                });
+                provider.on('chainChanged', () => {
+                    logEntry('Network changed. Please reconnect wallet.', 'system');
+                    handleDisconnect();
                 });
             }
         }
+        
+        function resetState() {
+            stopBot();
+            if (provider && provider.removeAllListeners) provider.removeAllListeners();
+            userAddress = null;
+            provider = null;
+            state = { walletBalance: 0.0, pnl: 0.0, trades: 0, wins: 0, positions: new Map() };
+            logContainer.innerHTML = '<div class="text-center text-gray-500 pt-10">Log is empty. Connect wallet and start the bot.</div>';
+            connectWalletBtn.textContent = 'Connect Wallet';
+            connectWalletBtn.className = 'gradient-bg text-white font-bold py-2 px-4 rounded-lg shadow-md transform hover:scale-105';
+            updateBotStatus(false);
+            updateStats();
+            renderPositions();
+        }
 
-        // --- INICIALIZACIJA ---
+        // --- INITIALIZATION ---
         window.addEventListener('load', () => {
             toggleBtn.addEventListener('click', toggleBot);
             connectWalletBtn.addEventListener('click', connectWallet);
-            walletBalanceEl.textContent = 'Poveži denarnico';
-            toggleBtn.classList.add('btn-disabled');
+            manualBuyBtn.addEventListener('click', handleManualBuy);
+
+            positionsContainer.addEventListener('click', (e) => {
+                if(e.target.classList.contains('sell-btn')) {
+                    const address = e.target.dataset.address;
+                    manualSell(address);
+                }
+            });
+
+            logTab.addEventListener('click', () => {
+                logTab.classList.add('active');
+                tradingTab.classList.remove('active');
+                logContainer.classList.remove('hidden');
+                tradingContainer.classList.add('hidden');
+            });
+
+            tradingTab.addEventListener('click', () => {
+                tradingTab.classList.add('active');
+                logTab.classList.remove('active');
+                tradingContainer.classList.remove('hidden');
+                logContainer.classList.add('hidden');
+            });
+
+            networkSelector.addEventListener('click', (e) => {
+                if(e.target.tagName === 'BUTTON' && !e.target.disabled) {
+                    const newChain = e.target.dataset.chain;
+                    if (newChain !== selectedChain) {
+                        selectedChain = newChain;
+                        networkSelector.querySelector('.active').classList.remove('active');
+                        e.target.classList.add('active');
+                        logEntry(`Network switched to ${chains[selectedChain].name}.`, 'system');
+                        resetState();
+                    }
+                }
+            });
             updateStats();
             renderPositions();
         });
-
     </script>
 </body>
 </html>
-
 
