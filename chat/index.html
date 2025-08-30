@@ -142,30 +142,18 @@
         <footer class="text-center py-6 text-gray-500 text-sm mt-8"><p>&copy; 2025 - Standalone Crypto Sniper Bot.</p></footer>
     </div>
 
-    <!-- MODALS -->
-    <div id="buy-crypto-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 modal">
+    <!-- FUND MODAL -->
+    <div id="fund-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 modal">
         <div class="card modal-content rounded-2xl p-6 w-full max-w-md relative border-cyan-500/20">
-            <button id="close-modal-btn" class="absolute top-4 right-4 text-gray-500 hover:text-white text-2xl font-bold">&times;</button>
-            <h2 id="modal-title" class="text-2xl font-bold text-white mb-6 text-center">Buy SOL</h2>
-            <div id="payment-options-container" class="space-y-4"></div>
-        </div>
-    </div>
-    
-    <div id="checkout-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 modal">
-        <div class="card modal-content rounded-2xl p-6 w-full max-w-md relative border-fuchsia-500/20">
-            <button id="close-checkout-btn" class="absolute top-4 right-4 text-gray-500 hover:text-white text-2xl font-bold">&times;</button>
-            <h2 id="checkout-title" class="text-2xl font-bold text-white mb-2 text-center">Purchase Simulation</h2>
-            <p id="checkout-provider" class="text-sm text-center text-gray-400 mb-6">via Credit/Debit Card</p>
-
+            <button id="close-fund-modal-btn" class="absolute top-4 right-4 text-gray-500 hover:text-white text-2xl font-bold">&times;</button>
+            <h2 id="fund-modal-title" class="text-2xl font-bold text-white mb-6 text-center">Fund Simulator</h2>
             <div class="space-y-4">
-                 <div>
-                     <label for="purchase-amount" class="block text-sm font-medium text-gray-400 mb-2">Amount to Buy (<span id="purchase-symbol">SOL</span>)</label>
-                     <input type="number" id="purchase-amount" placeholder="1.0" class="w-full bg-black/30 border border-gray-700 rounded-lg p-3 focus:ring-2 focus:ring-fuchsia-500 focus:outline-none text-sm">
-                 </div>
-                 <div class="text-xs text-gray-500 p-3 bg-black/20 rounded-lg">
-                    <p><strong>Disclaimer:</strong> This is a simulation. No real transaction will occur. Do not enter real payment information.</p>
-                 </div>
-                 <button id="confirm-purchase-btn" class="w-full gradient-bg text-white font-bold py-3 px-8 rounded-lg">Confirm Purchase</button>
+                <div>
+                    <label for="fund-amount" class="block text-sm font-medium text-gray-400 mb-2">Amount to Add (<span id="fund-symbol">SOL</span>)</label>
+                    <input type="number" id="fund-amount" placeholder="100" class="w-full bg-black/30 border border-gray-700 rounded-lg p-3 focus:ring-2 focus:ring-cyan-500 focus:outline-none text-sm">
+                </div>
+                <p class="text-xs text-gray-500">This will add simulated funds to your wallet balance for trading practice.</p>
+                <button id="confirm-fund-btn" class="w-full gradient-bg text-white font-bold py-3 px-8 rounded-lg">Add Funds</button>
             </div>
         </div>
     </div>
@@ -195,17 +183,12 @@
         const buyAmountInput = document.getElementById('buy-amount');
         const buyAmountSymbol = document.getElementById('buy-amount-symbol');
         const walletBalanceCard = document.getElementById('wallet-balance-card');
-        const buyCryptoModal = document.getElementById('buy-crypto-modal');
-        const closeModalBtn = document.getElementById('close-modal-btn');
-        const modalTitle = document.getElementById('modal-title');
-        const paymentOptionsContainer = document.getElementById('payment-options-container');
-        const checkoutModal = document.getElementById('checkout-modal');
-        const closeCheckoutBtn = document.getElementById('close-checkout-btn');
-        const checkoutTitle = document.getElementById('checkout-title');
-        const checkoutProvider = document.getElementById('checkout-provider');
-        const purchaseAmountInput = document.getElementById('purchase-amount');
-        const purchaseSymbol = document.getElementById('purchase-symbol');
-        const confirmPurchaseBtn = document.getElementById('confirm-purchase-btn');
+        const fundModal = document.getElementById('fund-modal');
+        const closeFundModalBtn = document.getElementById('close-fund-modal-btn');
+        const fundModalTitle = document.getElementById('fund-modal-title');
+        const fundAmountInput = document.getElementById('fund-amount');
+        const fundSymbol = document.getElementById('fund-symbol');
+        const confirmFundBtn = document.getElementById('confirm-fund-btn');
 
 
         // --- CHAIN CONFIGURATIONS ---
@@ -214,15 +197,6 @@
             ethereum: { name: 'Ethereum', symbol: 'ETH', type: 'evm', nodeUrl: 'https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161', wsUrl: 'wss://mainnet.infura.io/ws/v3/9aa3d95b3bc440fa88ea12eaa4456161', factoryAddress: '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', chainId: 1 },
             bnb: { name: 'BNB Smart Chain', symbol: 'BNB', type: 'evm', nodeUrl: 'https://bsc-dataseed.binance.org/', wsUrl: 'wss://bsc-ws-node.nariox.org:443', factoryAddress: '0xcA143Ce32fC7BFf22703467Fcb83841C48d88AC3', chainId: 56 }
         };
-
-        const paymentProviders = [
-            { name: 'Credit/Debit Card', provider: 'MoonPay/Simplex', fee: 4.5 },
-            { name: 'Apple Pay', provider: 'Apple', fee: 3.9 },
-            { name: 'Google Pay', provider: 'Google', fee: 3.9 },
-            { name: 'PayPal', provider: 'External Service', fee: 5.2 },
-            { name: 'Crypto Deposit', provider: 'Direct Transfer', fee: 0.5 },
-            { name: 'Revolut Pay', provider: 'Revolut', fee: 2.5 }
-        ];
 
         // --- APP STATE ---
         let isRunning = false, priceSimInterval, connection, subscriptionId, provider, userAddress;
@@ -320,63 +294,62 @@
         }
         
         // --- MODAL FUNCTIONS ---
-        function openBuyCryptoModal() {
+        function openFundModal() {
             if (!userAddress) {
                 logEntry("Connect your wallet to add funds.", "error");
                 return;
             }
-            modalTitle.textContent = `Buy ${chains[selectedChain].symbol}`;
-            paymentOptionsContainer.innerHTML = '';
-            
-            const sortedProviders = [...paymentProviders].sort((a, b) => a.fee - b.fee);
-
-            sortedProviders.forEach(provider => {
-                const isBestValue = provider.fee === sortedProviders[0].fee;
-                const optionEl = document.createElement('div');
-                optionEl.className = `flex justify-between items-center bg-black/30 p-4 rounded-lg border cursor-pointer hover:border-cyan-500/50 ${isBestValue ? 'border-green-500/50' : 'border-gray-800'}`;
-                optionEl.innerHTML = `<div><h4 class="font-semibold text-white">${provider.name}</h4><p class="text-sm text-gray-400">Fee: ~${provider.fee}%</p></div> ${isBestValue ? '<span class="bg-green-500/20 text-green-300 text-xs font-bold px-2 py-1 rounded-full">Best Value</span>' : ''}`;
-                optionEl.addEventListener('click', () => openCheckoutModal(provider));
-                paymentOptionsContainer.appendChild(optionEl);
-            });
-
-            buyCryptoModal.classList.remove('hidden');
+            fundModalTitle.textContent = `Fund Simulator (${chains[selectedChain].symbol})`;
+            fundSymbol.textContent = chains[selectedChain].symbol;
+            fundAmountInput.value = '100';
+            fundModal.classList.remove('hidden');
         }
 
-        function closeBuyCryptoModal() { buyCryptoModal.classList.add('hidden'); }
-        
-        function openCheckoutModal(provider) {
-            closeBuyCryptoModal();
-            checkoutProvider.textContent = `via ${provider.name}`;
-            purchaseSymbol.textContent = chains[selectedChain].symbol;
-            purchaseAmountInput.value = '';
-            checkoutModal.classList.remove('hidden');
+        function closeFundModal() {
+            fundModal.classList.add('hidden');
         }
-
-        function closeCheckoutModal() { checkoutModal.classList.add('hidden'); }
         
-        function handleConfirmPurchase() {
-            const amount = parseFloat(purchaseAmountInput.value);
+        function handleConfirmFund() {
+            const amount = parseFloat(fundAmountInput.value);
             if (isNaN(amount) || amount <= 0) {
-                logEntry("Invalid purchase amount entered.", "error");
+                logEntry("Invalid fund amount entered.", "error");
                 return;
             }
             state.walletBalance += amount;
-            logEntry(`Successfully added ${formatNumber(amount)} ${chains[selectedChain].symbol} to your balance.`, 'wallet', { address: userAddress });
+            logEntry(`Successfully added ${formatNumber(amount)} ${chains[selectedChain].symbol} via simulator.`, 'wallet', { address: userAddress });
             updateStats();
-            closeCheckoutModal();
+            closeFundModal();
         }
 
         // --- BOT LOGIC ---
         function simulatePriceChangesAndSells() {
-            if (!isRunning || state.positions.size === 0) return;
+            if (state.positions.size === 0) return;
+            
+            let positionsSold = false;
             const positionsToSell = [];
+
             for (const [address, pos] of state.positions.entries()) {
-                pos.currentValue *= (1 + (Math.random() - 0.48) * 0.2);
+                // More controlled price fluctuation per second
+                pos.currentValue *= (1 + (Math.random() - 0.5) * 0.1); 
                 const pnl = pos.currentValue - pos.buyValue;
-                if (pnl > pos.buyValue * 0.5 || pnl < -pos.buyValue * 0.25) { positionsToSell.push(address); }
+                
+                // Auto sell logic
+                if (isRunning && (pnl > pos.buyValue * 0.5 || pnl < -pos.buyValue * 0.25)) { 
+                    positionsToSell.push(address);
+                }
             }
-            if (positionsToSell.length > 0) { positionsToSell.forEach(address => manualSell(address, true)); }
-            renderPositions();
+            
+            if (positionsToSell.length > 0) {
+                positionsToSell.forEach(address => {
+                    manualSell(address, true);
+                    positionsSold = true;
+                });
+            }
+
+            // Always re-render to show per-second price changes
+            if (!positionsSold) {
+                 renderPositions();
+            }
         }
         
         function simulateBuy(details) {
@@ -412,7 +385,6 @@
                 logEntry(`Connected to ${chainConfig.name} Mainnet`, 'system');
                 connectionStatusEl.textContent = 'Connected';
                 connectionStatusEl.className = 'text-lg font-medium text-green-400';
-                priceSimInterval = setInterval(simulatePriceChangesAndSells, 5000);
             } catch(e) {
                 console.error("Bot start error:", e);
                 logEntry(`Error connecting: ${e.message}`, 'error');
@@ -429,8 +401,7 @@
                 if (selectedChain === 'solana' && connection) { await connection.removeOnLogsListener(subscriptionId); } 
                 else if (chains[selectedChain].type === 'evm') { subscriptionId.removeAllListeners(); if(connection && connection.destroy) connection.destroy(); }
             }
-            clearInterval(priceSimInterval);
-            connection = subscriptionId = priceSimInterval = null;
+            connection = subscriptionId = null;
             connectionStatusEl.textContent = 'Ready';
             connectionStatusEl.className = 'text-lg font-medium text-gray-400';
             updateBotStatus(false);
@@ -552,15 +523,17 @@
 
         // --- INITIALIZATION ---
         window.addEventListener('load', () => {
+            // Start price simulation interval globally
+            priceSimInterval = setInterval(simulatePriceChangesAndSells, 1000);
+
             toggleBtn.addEventListener('click', toggleBot);
             connectWalletBtn.addEventListener('click', connectWallet);
             manualBuyBtn.addEventListener('click', handleManualBuy);
-            walletBalanceCard.addEventListener('click', openBuyCryptoModal);
-            closeModalBtn.addEventListener('click', closeBuyCryptoModal);
-            buyCryptoModal.addEventListener('click', (e) => { if (e.target === buyCryptoModal) closeBuyCryptoModal(); });
-            closeCheckoutBtn.addEventListener('click', closeCheckoutModal);
-            checkoutModal.addEventListener('click', (e) => { if (e.target === checkoutModal) closeCheckoutModal(); });
-            confirmPurchaseBtn.addEventListener('click', handleConfirmPurchase);
+            walletBalanceCard.addEventListener('click', openFundModal);
+            
+            closeFundModalBtn.addEventListener('click', closeFundModal);
+            fundModal.addEventListener('click', (e) => { if (e.target === fundModal) closeFundModal(); });
+            confirmFundBtn.addEventListener('click', handleConfirmFund);
 
             positionsContainer.addEventListener('click', (e) => { if(e.target.classList.contains('sell-btn')) { manualSell(e.target.dataset.address); }});
 
