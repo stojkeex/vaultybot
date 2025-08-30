@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kripto Sniper Bot - Solana Edition v6.1</title>
+    <title>Kripto Sniper Bot - Solana Edition v6.2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -28,7 +28,7 @@
 
         <div class="relative mb-8 text-center">
             <header>
-                <h1 class="text-4xl font-bold text-white mb-2">Kripto Sniper Bot <span class="text-cyan-400">Solana v6.1</span></h1>
+                <h1 class="text-4xl font-bold text-white mb-2">Kripto Sniper Bot <span class="text-cyan-400">Solana v6.2</span></h1>
                 <p class="text-lg text-gray-400">Aplikacija z Integracijo Phantom Denarnice</p>
             </header>
             <div class="absolute top-0 right-0">
@@ -348,9 +348,16 @@
 
         async function updateWalletInfo() {
             if (!userAddress) return;
-            const tempConnection = new solanaWeb3.Connection(SOLANA_NODE_URL.replace('wss', 'https'), 'confirmed');
-            const balance = await tempConnection.getBalance(new solanaWeb3.PublicKey(userAddress));
-            state.walletBalance = balance / solanaWeb3.LAMPORTS_PER_SOL;
+            
+            try {
+                const tempConnection = new solanaWeb3.Connection(SOLANA_NODE_URL.replace('wss', 'https'), 'confirmed');
+                const balance = await tempConnection.getBalance(new solanaWeb3.PublicKey(userAddress));
+                state.walletBalance = balance / solanaWeb3.LAMPORTS_PER_SOL;
+            } catch (error) {
+                console.warn("Napaka pri pridobivanju stanja denarnice (verjetno 0 SOL):", error);
+                logEntry("Stanje ni bilo mogoče pridobiti. Nastavljeno na 0 SOL.", 'wallet', { address: userAddress });
+                state.walletBalance = 0.0;
+            }
             
             connectWalletBtn.textContent = `${userAddress.substring(0, 4)}...${userAddress.substring(userAddress.length - 4)}`;
             connectWalletBtn.className = 'bg-gray-700 text-gray-300 font-mono py-2 px-4 rounded-lg';
