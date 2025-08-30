@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kripto Sniper Bot - Solana Edition v6.2</title>
+    <title>Kripto Sniper Bot - Solana Edition v6.3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -28,7 +28,7 @@
 
         <div class="relative mb-8 text-center">
             <header>
-                <h1 class="text-4xl font-bold text-white mb-2">Kripto Sniper Bot <span class="text-cyan-400">Solana v6.2</span></h1>
+                <h1 class="text-4xl font-bold text-white mb-2">Kripto Sniper Bot <span class="text-cyan-400">Solana v6.3</span></h1>
                 <p class="text-lg text-gray-400">Aplikacija z Integracijo Phantom Denarnice</p>
             </header>
             <div class="absolute top-0 right-0">
@@ -89,7 +89,8 @@
         const winRateEl = document.getElementById('win-rate');
 
         // --- KONFIGURACIJA BOTA (SOLANA) ---
-        const SOLANA_NODE_URL = "wss://api.mainnet-beta.solana.com";
+        // POPRAVEK: Spremenjen URL na https://
+        const SOLANA_NODE_URL = "https://api.mainnet-beta.solana.com";
         const RAYDIUM_LIQUIDITY_PROGRAM_ID = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8";
         const WSOL_ADDRESS = "So11111111111111111111111111111111111111112";
         const BUY_AMOUNT_SOL = 0.05;
@@ -350,7 +351,8 @@
             if (!userAddress) return;
             
             try {
-                const tempConnection = new solanaWeb3.Connection(SOLANA_NODE_URL.replace('wss', 'https'), 'confirmed');
+                // POPRAVEK: Odstranjen .replace(), ker SOLANA_NODE_URL že uporablja https
+                const tempConnection = new solanaWeb3.Connection(SOLANA_NODE_URL, 'confirmed');
                 const balance = await tempConnection.getBalance(new solanaWeb3.PublicKey(userAddress));
                 state.walletBalance = balance / solanaWeb3.LAMPORTS_PER_SOL;
             } catch (error) {
@@ -405,4 +407,5 @@
     </script>
 </body>
 </html>
+
 
