@@ -1,903 +1,1005 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vaulty AI - Financial Chatbot</title>
+    <title>Vaulty - Connect Your World</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#000000',
+                        'secondary': '#1A1A1A',
+                        'accent': '#2B2B2B',
+                        'highlight': '#00fbff',
+                        'highlight-hover': '#00ddeb',
+                        'text-main': '#F9FAFB', // Off-white
+                        'text-secondary': '#9CA3AF', // Light gray
+                        'success': '#10B981',
+                        'danger': '#EF4444',
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #000000;
-            color: #E5E7EB;
-        }
-
-        /* Animated Gradient Text */
-        .animated-gradient-text {
-            background: linear-gradient(90deg, #00fbff, #002afa, #ff00d4, #00fbff);
+        body { font-family: 'Inter', sans-serif; background-color: #000000; }
+        .page { display: none; animation: fadeIn 0.5s ease-in-out; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .modal-backdrop { background-color: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1A1A1A; }
+        ::-webkit-scrollbar-thumb { background: #2B2B2B; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00fbff; }
+        .nav-btn.active svg { color: #00fbff; transform: scale(1.1); }
+        .nav-btn svg { transition: all 0.2s ease-in-out; }
+        .btn-primary { 
+            background: linear-gradient(90deg, rgba(0,251,255,1) 0%, rgba(0,42,250,1) 50%, rgba(255,0,212,1) 100%);
+            color: #FFFFFF;
+            font-weight: 700;
+            padding: 10px 20px;
+            border-radius: 8px;
+            transition: all 0.4s ease;
             background-size: 200% auto;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-fill-color: transparent;
-            animation: gradient-flow 4s linear infinite;
+            border: none;
+            cursor: pointer;
         }
-
-        @keyframes gradient-flow {
-            to {
-                background-position: -200% center;
-            }
+        .btn-primary:hover { 
+            background-position: right center; /* change the direction of the change here */
+            transform: scale(1.03);
         }
-        
-        .gradient-border {
-            border-width: 1px;
-            border-style: solid;
-            border-image: linear-gradient(90deg, rgba(0, 251, 255, 1) 0%, rgba(0, 42, 250, 1) 50%, rgba(255, 0, 212, 1) 100%) 1;
+        .btn-primary:disabled {
+            background: #2B2B2B;
+            cursor: not-allowed;
+            transform: scale(1);
         }
-
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
+        .input-field {
+            background-color: #2B2B2B;
+            border: 1px solid #4B5563;
+            color: #F9FAFB;
+            border-radius: 8px;
+            padding: 12px;
+            width: 100%;
+            transition: all 0.3s ease;
         }
-
-        ::-webkit-scrollbar-track {
-            background: #111827;
+        .input-field:focus {
+            outline: none;
+            border-color: #00fbff;
+            box-shadow: 0 0 0 3px rgba(0, 251, 255, 0.3);
         }
-
-        ::-webkit-scrollbar-thumb {
-            background: #4B5563;
-            border-radius: 10px;
+        .chat-bubble-sent {
+            background-color: #2B2B2B;
+            align-self: flex-end;
         }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #6B7280;
+        .chat-bubble-received {
+            background-color: #1A1A1A;
+            align-self: flex-start;
         }
-
-        .chat-message.thinking-animation::after {
-            content: '...';
-            display: inline-block;
-            animation: thinking 1.5s infinite;
+        .people-tab {
+            cursor: pointer;
+            padding: 8px 16px;
+            border-bottom: 2px solid transparent;
+            font-weight: 500;
         }
-
-        @keyframes thinking {
-            0% { content: '.'; }
-            33% { content: '..'; }
-            66% { content: '...'; }
-        }
-
-        /* Typing cursor effect */
-        .typing-cursor {
-            display: inline-block;
-            width: 8px;
-            height: 1.2em;
-            background-color: #00fbff;
-            animation: blink 1s step-end infinite;
-            margin-left: 2px;
-            vertical-align: bottom;
-        }
-        @keyframes blink {
-            from, to { background-color: transparent }
-            50% { background-color: #00fbff; }
-        }
-
-        /* Sidebar transition styles */
-        @media (max-width: 1023px) {
-            #app-container.sidebar-collapsed #sidebar {
-                transform: translateX(-100%);
-            }
-        }
-        @media (min-width: 1024px) {
-            #app-container.sidebar-collapsed #sidebar {
-                margin-left: -16rem; /* 16rem is w-64 */
-            }
-        }
-        #app-container:not(.sidebar-collapsed) #menuBtn {
-            display: none;
+        .people-tab.active {
+            color: #00fbff;
+            border-bottom-color: #00fbff;
         }
     </style>
 </head>
+<body class="bg-primary text-text-main">
 
-<body class="overflow-hidden">
+    <!-- Global Loader -->
+    <div id="loader" class="fixed inset-0 bg-primary z-50 flex items-center justify-center">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-highlight"></div>
+    </div>
 
-    <div id="app-container" class="flex h-screen bg-black text-gray-200">
-        <!-- Sidebar -->
-        <aside id="sidebar" class="w-64 p-4 flex flex-col transition-all duration-300 ease-in-out border-r border-gray-700 h-full z-20 flex-shrink-0 lg:relative absolute" style="background-color: #000000;">
-            <div class="flex items-center justify-between mb-6">
-                <h1 class="text-xl font-bold animated-gradient-text">Vaulty AI</h1>
-                <button id="sidebarToggle" class="text-gray-500 hover:text-white">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
+    <!-- Auth Container -->
+    <div id="auth-container" class="min-h-screen flex items-center justify-center p-4">
+        <div class="w-full max-w-md">
+            <div class="text-center mb-8">
+                 <h1 class="text-5xl font-extrabold bg-clip-text text-transparent" style="background-image: linear-gradient(90deg, rgba(0,251,255,1) 0%, rgba(0,42,250,1) 50%, rgba(255,0,212,1) 100%);">Vaulty</h1>
+                <p class="text-text-secondary mt-2">Connect Your World.</p>
             </div>
-            <button id="newChatBtn" class="w-full flex items-center justify-center gap-2 p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-                </svg>
-                New Chat
-            </button>
-            <div class="flex-grow overflow-y-auto">
-                <h2 class="text-sm font-semibold text-gray-400 mb-2">Recent Chats</h2>
-                <div id="recentChats" class="space-y-2">
-                    <!-- Recent chats will be populated here -->
-                </div>
+            <!-- Login Form -->
+            <div id="login-view">
+                <form id="login-form" class="bg-secondary shadow-2xl rounded-xl p-8 space-y-6">
+                    <h2 class="text-2xl font-bold text-center text-text-main">Welcome Back</h2>
+                    <div>
+                        <label for="login-email" class="block text-sm font-medium text-text-secondary mb-1">Email</label>
+                        <input type="email" id="login-email" required class="input-field" placeholder="you@example.com">
+                    </div>
+                    <div>
+                        <label for="login-password" class="block text-sm font-medium text-text-secondary mb-1">Password</label>
+                        <input type="password" id="login-password" required class="input-field" placeholder="••••••••">
+                    </div>
+                    <p id="login-error" class="text-danger text-sm text-center"></p>
+                    <button type="submit" class="w-full btn-primary">Login</button>
+                    <p class="text-center text-sm text-text-secondary">
+                        Don't have an account? <a href="#" id="show-register" class="font-medium text-highlight hover:text-highlight-hover">Sign up</a>
+                    </p>
+                </form>
             </div>
-            <div class="mt-4">
-                 <button id="openPremiumBtn" class="w-full flex items-center justify-center gap-2 p-2 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
-                    </svg>
-                    <span>Premium</span>
-                </button>
+            <!-- Register Form -->
+            <div id="register-view" class="hidden">
+                 <form id="register-form" class="bg-secondary shadow-2xl rounded-xl p-8 space-y-6">
+                    <h2 class="text-2xl font-bold text-center text-text-main">Create Account</h2>
+                    <div>
+                        <label for="register-username" class="block text-sm font-medium text-text-secondary mb-1">Username</label>
+                        <input type="text" id="register-username" required class="input-field" placeholder="your_username">
+                    </div>
+                    <div>
+                        <label for="register-email" class="block text-sm font-medium text-text-secondary mb-1">Email</label>
+                        <input type="email" id="register-email" required class="input-field" placeholder="you@example.com">
+                    </div>
+                    <div>
+                        <label for="register-password" class="block text-sm font-medium text-text-secondary mb-1">Password</label>
+                        <input type="password" id="register-password" required class="input-field" placeholder="min. 6 characters">
+                    </div>
+                    <p id="register-error" class="text-danger text-sm text-center"></p>
+                    <button type="submit" class="w-full btn-primary">Create Account</button>
+                    <p class="text-center text-sm text-text-secondary">
+                        Already have an account? <a href="#" id="show-login" class="font-medium text-highlight hover:text-highlight-hover">Log in</a>
+                    </p>
+                </form>
             </div>
-        </aside>
+        </div>
+    </div>
 
-        <!-- Main Content -->
-        <main class="flex-1 flex flex-col relative transition-all duration-300 ease-in-out">
-             <header class="flex items-center justify-between p-2 sm:p-4 border-b border-gray-800" style="background-color: #000000;">
-                <div class="flex items-center gap-4">
-                    <button id="menuBtn" class="p-2 rounded-md hover:bg-gray-800">
-                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
-                        </svg>
-                    </button>
-                    <div class="relative" id="model-selector">
-                        <button id="model-selector-btn" class="model-btn active flex items-center gap-2">
-                            <span id="active-model-name">Vault 1 Basic</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                            </svg>
-                        </button>
-                        <div id="model-dropdown" class="absolute top-full mt-2 w-52 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10 hidden">
-                            <a href="#" class="model-dropdown-item" data-model="Vault 1 Basic">Vault 1 Basic</a>
-                            <a href="#" class="model-dropdown-item" data-model="Vault 1 Advance">Vault 1 Advance</a>
-                            <a href="#" class="model-dropdown-item" data-model="Vault 1 Pro" data-required-plan="Pro">
-                                <span>Vault 1 Pro</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="lock-icon h-4 w-4 text-yellow-400 hidden" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M10 2a4 4 0 00-4 4v2H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2V10a2 2 0 00-2-2h-1V6a4 4 0 00-4-4zm-2 6V6a2 2 0 114 0v2H8z" clip-rule="evenodd" />
-                                </svg>
-                            </a>
-                            <a href="#" class="model-dropdown-item" data-model="Vault 1 Max" data-required-plan="Max">
-                                <span>Vault 1 Max</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="lock-icon h-4 w-4 text-yellow-400 hidden" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M10 2a4 4 0 00-4 4v2H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2V10a2 2 0 00-2-2h-1V6a4 4 0 00-4-4zm-2 6V6a2 2 0 114 0v2H8z" clip-rule="evenodd" />
-                                </svg>
-                            </a>
+    <!-- Main App Container -->
+    <div id="app-container" class="hidden">
+        <main id="main-content" class="pb-24 pt-6 px-4">
+            <!-- Home Page -->
+            <div id="home-page" class="page active">
+                <div class="max-w-3xl mx-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <h1 class="text-3xl font-bold text-text-main">Timeline</h1>
+                        <button id="logout-btn" class="text-sm text-text-secondary hover:text-highlight transition-colors">Logout</button>
+                    </div>
+                    <!-- Create Post Card -->
+                    <div class="bg-secondary p-4 rounded-xl mb-6 shadow-lg">
+                        <textarea id="post-content" class="input-field w-full h-24 resize-none" placeholder="What's on your mind?"></textarea>
+                        <div class="text-right mt-3">
+                            <button id="create-post-btn" class="btn-primary">Post</button>
                         </div>
                     </div>
+                    <!-- Posts Container -->
+                    <div id="posts-container" class="space-y-6">
+                        <!-- Posts will be dynamically added here -->
+                    </div>
                 </div>
-                <div class="flex items-center gap-4">
-                    <div class="relative group">
-                        <button class="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center hover:bg-gray-600 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
-                        </button>
-                        <div class="absolute top-full right-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10 hidden group-hover:block">
-                            <div class="p-4">
-                                <p class="text-sm text-gray-400">Available Credits</p>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <span class="text-xl font-bold animated-gradient-text" id="dropdownCreditDisplay">10.00</span>
-                                    <span class="text-gray-400">VC</span>
-                                </div>
+            </div>
+
+            <!-- Marketplace Page -->
+            <div id="marketplace-page" class="page">
+                 <div class="max-w-5xl mx-auto">
+                    <h1 class="text-3xl font-bold text-text-main mb-6">Marketplace</h1>
+                    <div class="bg-secondary p-4 rounded-xl mb-6 shadow-lg">
+                        <h2 class="text-xl font-semibold mb-4">Sell an Item</h2>
+                        <div class="space-y-4">
+                            <input id="item-name" class="input-field" placeholder="Item Name">
+                            <textarea id="item-description" class="input-field h-24 resize-none" placeholder="Description"></textarea>
+                            <input type="number" id="item-price" class="input-field" placeholder="Price ($)">
+                        </div>
+                        <button id="add-item-btn" class="mt-4 w-full btn-primary">List Item</button>
+                    </div>
+                    <div id="marketplace-items-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Marketplace items will be added here -->
+                    </div>
+                 </div>
+            </div>
+            
+            <!-- Groups Page -->
+            <div id="groups-page" class="page">
+                 <div class="max-w-3xl mx-auto">
+                    <div id="groups-list-view">
+                        <div class="flex justify-between items-center mb-6">
+                            <h1 class="text-3xl font-bold text-text-main">Groups</h1>
+                            <button id="show-create-group-btn" class="btn-primary text-sm !py-2 !px-3">Create</button>
+                        </div>
+                        <div id="my-groups-container" class="space-y-3">
+                            <!-- User's groups will be listed here -->
+                        </div>
+                    </div>
+                    <div id="create-group-view" class="hidden">
+                        <h1 class="text-3xl font-bold text-text-main mb-6">Create a New Group</h1>
+                        <div class="bg-secondary p-4 rounded-xl space-y-4">
+                            <input id="group-name" class="input-field" placeholder="Group Name">
+                            <textarea id="group-description" class="input-field h-24" placeholder="Group Description"></textarea>
+                            <div class="flex justify-end space-x-3">
+                                <button id="cancel-create-group-btn" class="bg-accent hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">Cancel</button>
+                                <button id="create-group-btn" class="btn-primary">Create Group</button>
                             </div>
                         </div>
                     </div>
+                    <div id="group-chat-view" class="hidden h-[calc(100vh-150px)] flex flex-col">
+                        <div class="flex items-center mb-4 p-2 bg-secondary rounded-t-xl">
+                            <button id="back-to-groups-btn" class="mr-4 text-highlight">&larr;</button>
+                            <img id="group-chat-pic" src="" class="w-10 h-10 rounded-full mr-3">
+                            <h2 id="group-chat-name" class="text-xl font-bold"></h2>
+                        </div>
+                        <div id="group-messages-container" class="flex-grow overflow-y-auto p-4 space-y-4 flex flex-col">
+                            <!-- Group messages here -->
+                        </div>
+                        <div class="p-4 bg-secondary rounded-b-xl flex">
+                            <input type="text" id="group-message-input" class="input-field flex-grow rounded-r-none" placeholder="Type a message...">
+                            <button id="send-group-message-btn" class="btn-primary rounded-l-none">Send</button>
+                        </div>
+                    </div>
                 </div>
-            </header>
+            </div>
             
-            <div id="chatContainer" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
-                 <!-- Welcome Screen -->
-                <div id="welcomeScreen" class="flex flex-col items-center justify-center h-full text-center">
-                    <h1 class="text-5xl md:text-6xl font-bold animated-gradient-text">Vaulty AI</h1>
-                    <p class="mt-4 text-xl text-gray-400">How can I help you today?</p>
+            <!-- People Page -->
+            <div id="people-page" class="page">
+                 <div class="max-w-3xl mx-auto">
+                    <h1 class="text-3xl font-bold text-text-main mb-6">People</h1>
+                    <div class="flex border-b border-accent mb-4">
+                        <div id="people-tab-messages" class="people-tab active" onclick="window.switchPeopleTab('messages')">Messages</div>
+                        <div id="people-tab-friends" class="people-tab" onclick="window.switchPeopleTab('friends')">Friends</div>
+                        <div id="people-tab-requests" class="people-tab" onclick="window.switchPeopleTab('requests')">Requests</div>
+                        <div id="people-tab-find" class="people-tab" onclick="window.switchPeopleTab('find')">Find People</div>
+                    </div>
+
+                    <div id="messages-view">
+                        <div id="conversations-view">
+                            <div class="flex justify-end mb-4">
+                                <button id="new-chat-btn" class="btn-primary text-sm !py-2 !px-3">New Chat</button>
+                            </div>
+                            <div id="conversations-container" class="space-y-3"></div>
+                        </div>
+                        <div id="chat-view" class="hidden h-[calc(100vh-220px)] flex flex-col">
+                            <div class="flex items-center mb-4 p-2 bg-secondary rounded-t-xl">
+                                <button id="back-to-conversations-btn" class="mr-4 text-highlight">&larr;</button>
+                                <img id="chat-pic" src="" class="w-10 h-10 rounded-full mr-3">
+                                <h2 id="chat-name" class="text-xl font-bold"></h2>
+                            </div>
+                            <div id="messages-container" class="flex-grow overflow-y-auto p-4 space-y-4 flex flex-col"></div>
+                            <div class="p-4 bg-secondary rounded-b-xl flex">
+                                <input type="text" id="message-input" class="input-field flex-grow rounded-r-none" placeholder="Type a message...">
+                                <button id="send-message-btn" class="btn-primary rounded-l-none">Send</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="my-friends-view" class="hidden">
+                        <div id="my-friends-list" class="space-y-3"></div>
+                    </div>
+                    <div id="friend-requests-view" class="hidden">
+                        <div id="friend-requests-list" class="space-y-3"></div>
+                    </div>
+                    <div id="find-people-view" class="hidden">
+                        <div class="relative mb-4">
+                            <input id="search-users-input" class="input-field !pr-10" placeholder="Search by username...">
+                            <svg class="absolute top-1/2 right-3 -translate-y-1/2 w-5 h-5 text-text-secondary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" /></svg>
+                        </div>
+                        <div id="search-results-list" class="space-y-3"></div>
+                    </div>
                 </div>
-                <!-- Chat messages will appear here -->
             </div>
 
-            <div class="p-4 md:p-6 bg-black/30">
-                <div class="max-w-4xl mx-auto">
-                    <form id="chatForm" class="flex items-center gap-2 md:gap-4 bg-gray-900/80 border border-gray-700 rounded-full p-2">
-                        <label for="file-upload" class="cursor-pointer p-2 rounded-full hover:bg-gray-700 transition-colors">
-                           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
-                            </svg>
-                        </label>
-                         <input id="file-upload" type="file" class="hidden">
-                        <input type="text" id="messageInput" placeholder="Ask anything about finance..." class="flex-1 bg-transparent focus:outline-none text-gray-200 placeholder-gray-500" autocomplete="off">
-                        <button type="submit" id="sendBtn" class="p-2 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-                            </svg>
-                        </button>
-                    </form>
+
+            <!-- Profile Page -->
+            <div id="profile-page" class="page">
+                <div class="max-w-3xl mx-auto">
+                    <div class="bg-secondary p-6 rounded-xl shadow-lg text-center">
+                        <img id="profile-pic" src="https://placehold.co/128x128/1A1A1A/F9FAFB?text=U" class="w-32 h-32 rounded-full mx-auto mb-4 ring-4 ring-highlight">
+                        <h2 id="profile-username" class="text-3xl font-bold">...</h2>
+                        <p id="profile-email" class="text-text-secondary">...</p>
+                        <div class="mt-4 text-lg">
+                            <span class="font-bold text-text-main" id="profile-friends-count">0</span>
+                            <span class="text-text-secondary">Friends</span>
+                        </div>
+                    </div>
+                    <h3 class="text-2xl font-bold mt-10 mb-4">My Posts</h3>
+                    <div id="my-posts-container" class="space-y-6">
+                        <!-- User's posts -->
+                    </div>
                 </div>
             </div>
         </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="fixed bottom-0 left-0 right-0 bg-secondary/80 backdrop-blur-sm border-t border-accent">
+            <div class="flex justify-around max-w-5xl mx-auto">
+                <button data-page="home-page" class="nav-btn p-4 active">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                </button>
+                <button data-page="marketplace-page" class="nav-btn p-4">
+                    <svg class="h-7 w-7 text-text-secondary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                </button>
+                 <button data-page="groups-page" class="nav-btn p-4">
+                    <svg class="h-7 w-7 text-text-secondary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                </button>
+                <button data-page="people-page" class="nav-btn p-4 relative">
+                    <svg class="h-7 w-7 text-text-secondary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21a6 6 0 00-9-5.197M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    <span id="friend-requests-badge" class="absolute top-2 right-2 w-4 h-4 bg-danger text-white text-xs rounded-full hidden items-center justify-center"></span>
+                </button>
+                <button data-page="profile-page" class="nav-btn p-4">
+                    <svg class="h-7 w-7 text-text-secondary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                </button>
+            </div>
+        </nav>
     </div>
     
-    <!-- Premium Modal -->
-    <div id="premiumModal" class="fixed inset-0 bg-black bg-opacity-70 backdrop-blur-md flex items-center justify-center hidden z-50">
-        <div class="bg-gray-900 rounded-2xl shadow-2xl p-8 max-w-5xl w-full m-4 border border-gray-700 relative overflow-hidden">
-             <button id="closePremiumBtn" class="absolute top-4 right-4 text-gray-500 hover:text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-             </button>
-             <div class="text-center mb-8">
-                 <h2 class="text-4xl font-bold animated-gradient-text">Unlock Full Potential</h2>
-                 <p class="text-gray-400 mt-2">Choose the plan that best suits your needs.</p>
-             </div>
-             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <!-- Free Plan -->
-                <div class="plan-card">
-                    <h3 class="text-2xl font-bold">Free</h3>
-                    <p class="text-gray-400">Basic Features</p>
-                    <p class="text-4xl font-bold my-4">$0</p>
-                    <ul class="space-y-2 text-left">
-                        <li class="flex items-center gap-2"><svg class="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>$10 daily Vault Credits</li>
-                        <li class="flex items-center gap-2"><svg class="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Standard speed</li>
-                        <li class="flex items-center gap-2"><svg class="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Access to Vault 1 Basic</li>
-                    </ul>
-                    <button class="plan-selector-btn mt-6 w-full" data-plan="Free">Select Plan</button>
-                </div>
-                <!-- Pro Plan -->
-                <div class="plan-card">
-                    <h3 class="text-2xl font-bold">Pro</h3>
-                    <p class="text-gray-400">For professionals</p>
-                    <p class="text-4xl font-bold my-4">$14.99<span class="text-base font-normal text-gray-400">/mo</span></p>
-                    <ul class="space-y-2 text-left">
-                        <li class="flex items-center gap-2"><svg class="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>$40 daily Vault Credits</li>
-                        <li class="flex items-center gap-2"><svg class="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Increased speed</li>
-                        <li class="flex items-center gap-2"><svg class="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Access to Vault 1 Pro</li>
-                    </ul>
-                     <button class="plan-selector-btn mt-6 w-full" data-plan="Pro">Upgrade</button>
-                </div>
-                <!-- Max Plan -->
-                <div class="plan-card premium-gradient-border">
-                    <div class="absolute top-0 right-0 -mt-3 mr-3 px-3 py-1 bg-gradient-to-r from-cyan-400 to-fuchsia-500 text-white text-sm font-bold rounded-full">Most Popular</div>
-                    <h3 class="text-2xl font-bold">Max</h3>
-                    <p class="text-gray-400">For heavy users</p>
-                    <p class="text-4xl font-bold my-4">$99.99<span class="text-base font-normal text-gray-400">/mo</span></p>
-                    <ul class="space-y-2 text-left">
-                        <li class="flex items-center gap-2"><svg class="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>$100 daily Vault Credits</li>
-                        <li class="flex items-center gap-2"><svg class="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Highest speed</li>
-                        <li class="flex items-center gap-2"><svg class="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Access to Vault 1 Max</li>
-                    </ul>
-                     <button class="plan-selector-btn mt-6 w-full plan-btn-premium" data-plan="Max">Upgrade</button>
-                </div>
-                <!-- Team Plan -->
-                <div class="plan-card">
-                    <h3 class="text-2xl font-bold">Team</h3>
-                    <p class="text-gray-400">For companies & teams</p>
-                    <p class="text-4xl font-bold my-4">$179.99<span class="text-base font-normal text-gray-400">/mo</span></p>
-                    <ul class="space-y-2 text-left">
-                        <li class="flex items-center gap-2"><svg class="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Everything from Max</li>
-                        <li class="flex items-center gap-2"><svg class="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Up to 5 users</li>
-                        <li class="flex items-center gap-2"><svg class="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Shared management</li>
-                    </ul>
-                     <button class="plan-selector-btn mt-6 w-full" data-plan="Team">Contact Us</button>
-                </div>
-             </div>
+    <!-- Modals -->
+    <div id="donate-modal" class="fixed inset-0 z-40 items-center justify-center hidden modal-backdrop">
+        <div class="bg-secondary rounded-xl p-6 w-full max-w-sm m-4 shadow-2xl">
+            <h3 class="text-xl font-bold mb-4">Donate to Author</h3>
+            <input type="number" id="donate-amount" class="input-field mb-4" placeholder="Amount in $" min="1">
+            <input type="hidden" id="donate-post-id">
+            <div class="flex justify-end space-x-3">
+                <button id="cancel-donation" class="bg-accent hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">Cancel</button>
+                <button id="confirm-donation" class="btn-primary">Donate</button>
+            </div>
         </div>
     </div>
     
-    <style>
-        .model-btn {
-            padding: 0.5rem 1rem;
-            border-radius: 9999px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            transition: all 0.2s;
-            border: 1px solid #374151;
-            background-color: transparent;
-            color: #9CA3AF;
-        }
-        .model-btn:hover {
-            background-color: #1F2937;
-            color: #E5E7EB;
-        }
-        .model-btn.active {
-            background: linear-gradient(90deg, rgba(0, 251, 255, 1) 0%, rgba(0, 42, 250, 1) 50%, rgba(255, 0, 212, 1) 100%);
-            color: white;
-            border-color: transparent;
-        }
-        .model-dropdown-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.75rem 1rem;
-            color: #D1D5DB;
-            font-size: 0.875rem;
-            transition: background-color 0.2s;
-        }
-        .model-dropdown-item:not(.locked):hover {
-            background-color: #374151;
-            color: #F9FAFB;
-        }
-        .model-dropdown-item.locked {
-            color: #6B7280;
-            cursor: pointer;
-        }
-         .model-dropdown-item.locked:hover {
-            background-color: #374151;
-         }
-        @media (min-width: 640px) {
-            .model-btn {
-                padding: 0.5rem 1rem;
-                font-size: 0.875rem;
-            }
-        }
-        .plan-card {
-            background-color: #111827;
-            border-radius: 1rem;
-            padding: 1.5rem;
-            text-align: center;
-            border: 1px solid #374151;
-            position: relative;
-        }
-        .plan-selector-btn {
-            background-color: #374151;
-            color: #E5E7EB;
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-            font-weight: 600;
-            transition: background-color 0.2s;
-            width: 100%;
-        }
-        .plan-selector-btn:hover {
-            background-color: #4B5563;
-        }
-        .plan-selector-btn.plan-btn-premium {
-             background: linear-gradient(90deg, rgba(0, 251, 255, 1) 0%, rgba(0, 42, 250, 1) 50%, rgba(255, 0, 212, 1) 100%);
-             color: white;
-        }
-        .plan-selector-btn.active-plan {
-             background-color: transparent;
-             border: 1px solid #4B5563;
-             color: #9CA3AF;
-             cursor: default;
-        }
-        .premium-gradient-border {
-             border: 2px solid transparent;
-             background-clip: padding-box;
-             border-image: linear-gradient(90deg, rgba(0, 251, 255, 1) 0%, rgba(0, 42, 250, 1) 50%, rgba(255, 0, 212, 1) 100%) 1;
-        }
-    </style>
+     <div id="comments-modal" class="fixed inset-0 z-40 items-center justify-center hidden modal-backdrop">
+        <div class="bg-secondary rounded-xl p-6 w-full max-w-lg h-5/6 flex flex-col m-4 shadow-2xl">
+            <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h3 class="text-xl font-bold">Comments</h3>
+                <button id="close-comments-modal" class="text-3xl text-text-secondary hover:text-text-main">&times;</button>
+            </div>
+            <div id="comments-list" class="flex-grow overflow-y-auto space-y-4 pr-2"></div>
+            <div class="mt-4 flex flex-shrink-0">
+                <input type="text" id="comment-input" class="input-field rounded-r-none flex-grow" placeholder="Write a comment...">
+                <input type="hidden" id="comment-post-id">
+                <button id="submit-comment" class="btn-primary rounded-l-none">Send</button>
+            </div>
+        </div>
+    </div>
 
+    <div id="new-chat-modal" class="fixed inset-0 z-40 items-center justify-center hidden modal-backdrop">
+        <div class="bg-secondary rounded-xl p-6 w-full max-w-lg h-5/6 flex flex-col m-4 shadow-2xl">
+             <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                <h3 class="text-xl font-bold">Start a new Chat</h3>
+                <button id="close-new-chat-modal" class="text-3xl text-text-secondary hover:text-text-main">&times;</button>
+            </div>
+            <div id="friends-chat-list" class="flex-grow overflow-y-auto space-y-3">
+                <!-- Friends list for new chat -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Security: Disable Right-Click & Dev Tools ---
+        document.addEventListener('contextmenu', event => event.preventDefault());
+        document.onkeydown = function (e) {
+            if (e.keyCode == 123) { return false; } // F12
+            if (e.ctrlKey && e.shiftKey && e.keyCode == 'I'.charCodeAt(0)) { return false; } // Ctrl+Shift+I
+            if (e.ctrlKey && e.shiftKey && e.keyCode == 'C'.charCodeAt(0)) { return false; } // Ctrl+Shift+C
+            if (e.ctrlKey && e.shiftKey && e.keyCode == 'J'.charCodeAt(0)) { return false; } // Ctrl+Shift+J
+            if (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) { return false; } // Ctrl+U
+        };
+    </script>
     <script type="module">
-        const chatContainer = document.getElementById('chatContainer');
-        const chatForm = document.getElementById('chatForm');
-        const messageInput = document.getElementById('messageInput');
-        const sendBtn = document.getElementById('sendBtn');
-        const welcomeScreen = document.getElementById('welcomeScreen');
-        const dropdownCreditDisplay = document.getElementById('dropdownCreditDisplay');
-        const recentChatsContainer = document.getElementById('recentChats');
-        const newChatBtn = document.getElementById('newChatBtn');
-        
-        // Sidebar elements
+        // Import a Firebase SDK
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { 
+            getAuth, 
+            createUserWithEmailAndPassword, 
+            signInWithEmailAndPassword, 
+            signOut, 
+            onAuthStateChanged,
+            updateProfile
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            query, 
+            orderBy, 
+            onSnapshot,
+            serverTimestamp,
+            doc,
+            updateDoc,
+            arrayUnion,
+            arrayRemove,
+            getDoc,
+            where,
+            getDocs,
+            increment,
+            runTransaction,
+            setDoc,
+            deleteDoc,
+            writeBatch
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBD202YQyRGa7PUE9kh8o-bQQciAO8Lwc8",
+            authDomain: "glowearth-f0801.firebaseapp.com",
+            projectId: "glowearth-f0801",
+            storageBucket: "glowearth-f0801.firebasestorage.app",
+            messagingSenderId: "11001317302",
+            appId: "1:11001317302:web:db00d5dd1cf0fabf862317"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Global state
+        let currentUser = null;
+        let userData = null;
+        let activeChatId = null;
+        let activeGroupId = null;
+        let messageUnsubscribe = null;
+        let groupMessageUnsubscribe = null;
+
+        // DOM Elements
+        const loader = document.getElementById('loader');
+        const authContainer = document.getElementById('auth-container');
         const appContainer = document.getElementById('app-container');
-        const sidebar = document.getElementById('sidebar');
-        const menuBtn = document.getElementById('menuBtn');
-        const sidebarToggle = document.getElementById('sidebarToggle');
-        
-        // Model Selector Elements
-        const modelSelectorBtn = document.getElementById('model-selector-btn');
-        const modelDropdown = document.getElementById('model-dropdown');
-        const activeModelName = document.getElementById('active-model-name');
-        const modelDropdownItems = document.querySelectorAll('.model-dropdown-item');
+        const loginView = document.getElementById('login-view');
+        const registerView = document.getElementById('register-view');
 
-        // Premium Modal Elements
-        const premiumModal = document.getElementById('premiumModal');
-        const openPremiumBtn = document.getElementById('openPremiumBtn');
-        const closePremiumBtn = document.getElementById('closePremiumBtn');
-        const planSelectorBtns = document.querySelectorAll('.plan-selector-btn');
-
-        let credits = 10.00;
-        let activeModel = 'Vault 1 Basic';
-        let chats = {};
-        let currentChatId = null;
-        let currentUserPlan = 'Free'; // Can be 'Free', 'Pro', 'Max', 'Team'
-
-        // --- Event Listeners ---
-        chatForm.addEventListener('submit', handleSendMessage);
-        newChatBtn.addEventListener('click', createNewChat);
-
-        // Sidebar Toggle Logic
-        menuBtn.addEventListener('click', () => {
-             appContainer.classList.remove('sidebar-collapsed');
+        // View switching
+        document.getElementById('show-register').addEventListener('click', (e) => {
+            e.preventDefault(); loginView.classList.add('hidden'); registerView.classList.remove('hidden');
         });
-        sidebarToggle.addEventListener('click', () => {
-             appContainer.classList.add('sidebar-collapsed');
+        document.getElementById('show-login').addEventListener('click', (e) => {
+            e.preventDefault(); registerView.classList.add('hidden'); loginView.classList.remove('hidden');
         });
 
-        openPremiumBtn.addEventListener('click', () => {
-            updatePremiumModalUI();
-            premiumModal.classList.remove('hidden');
-        });
-        closePremiumBtn.addEventListener('click', () => premiumModal.classList.add('hidden'));
-
-        modelSelectorBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            updateModelLockStatus();
-            modelDropdown.classList.toggle('hidden');
-        });
-        
-        modelDropdown.addEventListener('click', (e) => {
-            e.preventDefault();
-            const targetItem = e.target.closest('.model-dropdown-item');
-            if (!targetItem) return;
-
-            if (targetItem.classList.contains('locked')) {
-                updatePremiumModalUI();
-                premiumModal.classList.remove('hidden');
-                modelDropdown.classList.add('hidden');
-                return;
-            }
-
-            activeModel = targetItem.dataset.model;
-            activeModelName.textContent = activeModel;
-            modelDropdown.classList.add('hidden');
-        });
-
-
-        document.addEventListener('click', (e) => {
-            if (!document.getElementById('model-selector').contains(e.target)) {
-                modelDropdown.classList.add('hidden');
-            }
-        });
-
-        planSelectorBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                currentUserPlan = btn.dataset.plan;
-                // In a real app, this would trigger a payment flow. Here we just update the state.
-                console.log(`User plan changed to: ${currentUserPlan}`);
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                const userDocRef = doc(db, "users", user.uid);
                 
-                // If user selects a lower plan, downgrade active model if necessary
-                const planHierarchy = { 'Free': 0, 'Pro': 1, 'Max': 2, 'Team': 2 };
-                const modelHierarchy = { 'Vault 1 Basic': 0, 'Vault 1 Advance': 0, 'Vault 1 Pro': 1, 'Vault 1 Max': 2 };
-
-                if (modelHierarchy[activeModel] > planHierarchy[currentUserPlan]) {
-                    activeModel = 'Vault 1 Basic';
-                    activeModelName.textContent = activeModel;
-                }
-
-                premiumModal.classList.add('hidden');
-            });
-        });
-
-
-        // --- Core Functions ---
-
-        async function handleSendMessage(e) {
-            e.preventDefault();
-            const message = messageInput.value.trim();
-            if (!message) return;
-
-            if (!currentChatId) {
-                createNewChat();
-            }
-
-            welcomeScreen.classList.add('hidden');
-            
-            appendMessage('user', message);
-            chats[currentChatId].messages.push({ role: 'user', content: message });
-            saveChats();
-
-            messageInput.value = '';
-            messageInput.disabled = true;
-            sendBtn.disabled = true;
-
-            await getBotResponse(message);
-        }
-        
-        async function getBotResponse(userMessage) {
-            const thinkingMessageId = `msg-${Date.now()}`;
-            
-            appendThinkingMessage(thinkingMessageId);
-
-            // This timeout is just for the initial "Thinking" message to appear smoothly
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            const botMessageElement = document.getElementById(thinkingMessageId);
-            const thinkingContent = botMessageElement.querySelector('.thinking-content');
-            const thinkingDropdown = botMessageElement.querySelector('.thinking-dropdown');
-            
-            thinkingContent.innerHTML = 'Generating response... <span class="typing-cursor"></span>';
-
-            const thoughts = [
-                'Analyzing query...',
-                'Formatting request for the Gemini API...',
-                `Querying with the ${activeModel} model...`,
-                'Awaiting response from the language model...'
-            ];
-            
-            let thoughtIndex = 0;
-            const thoughtInterval = setInterval(() => {
-                if (thoughtIndex < thoughts.length) {
-                    const p = document.createElement('p');
-                    p.textContent = `[Step ${thoughtIndex + 1}] ${thoughts[thoughtIndex]}`;
-                    thinkingDropdown.appendChild(p);
-                    thoughtIndex++;
-                } else {
-                    clearInterval(thoughtInterval);
-                }
-            }, 1000);
-
-            const responseText = await callGeminiAPI(userMessage);
-            clearInterval(thoughtInterval);
-
-            const cost = calculateCost(responseText);
-            updateCredits(credits - cost);
-
-            const messageContent = botMessageElement.querySelector('.chat-message-content');
-            typeMessage(messageContent, responseText);
-
-            const actions = botMessageElement.querySelector('.chat-actions');
-            actions.classList.remove('hidden');
-
-            chats[currentChatId].messages.push({ role: 'bot', content: responseText });
-            saveChats();
-            
-            messageInput.disabled = false;
-            sendBtn.disabled = false;
-            messageInput.focus();
-        }
-        
-        async function callGeminiAPI(userQuery) {
-            const systemPrompt = "You are Vaulty AI, a world-class financial analyst and cryptocurrency expert. Your goal is to provide concise, accurate, and insightful information about finance, stocks, crypto, and business. Do not answer questions outside of these topics. If asked about an unrelated topic, politely state that you only answer finance-related questions.";
-            const apiKey = ""; // Canvas will provide this
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-
-            const payload = {
-                contents: [{ parts: [{ text: userQuery }] }],
-                systemInstruction: {
-                    parts: [{ text: systemPrompt }]
-                },
-            };
-            
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                onSnapshot(userDocRef, (doc) => {
+                     if (doc.exists()) {
+                        userData = { id: user.uid, ...doc.data() };
+                        setupProfilePage();
+                        loadMyFriends();
+                    } else {
+                        console.error("User data not found in Firestore!");
+                        userData = { id: user.uid, username: user.displayName, email: user.email, profilePictureUrl: user.photoURL || `https://placehold.co/128x128/1A1A1A/F9FAFB?text=${user.displayName?.charAt(0).toUpperCase()}`, friends: [], friendRequestsSent: [] };
+                    }
                 });
 
-                if (!response.ok) {
-                    const error = await response.json();
-                    console.error("API Error:", error);
-                    return "Sorry, I encountered an error while processing your request. Please try again later.";
-                }
+                authContainer.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+                loadInitialData();
+            } else {
+                currentUser = null; userData = null;
+                authContainer.classList.remove('hidden'); appContainer.classList.add('hidden');
+            }
+            loader.classList.add('hidden');
+        });
+        
+        function loadInitialData() {
+            loadPosts();
+            loadMarketplaceItems();
+            loadMyPosts();
+            loadConversations();
+            loadGroups();
+            loadFriendRequests();
+        }
 
-                const result = await response.json();
-                const candidate = result.candidates?.[0];
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            signInWithEmailAndPassword(auth, email, password)
+                .catch(error => document.getElementById('login-error').textContent = error.message);
+        });
 
-                if (candidate && candidate.content?.parts?.[0]?.text) {
-                    return candidate.content.parts[0].text;
-                } else {
-                    return "Sorry, I couldn't generate a response. The model's response was empty.";
-                }
-
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('register-username').value.trim();
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+             if (!username) {
+                document.getElementById('register-error').textContent = "Username cannot be empty.";
+                return;
+            }
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+                await updateProfile(user, { displayName: username });
+                const userDocRef = doc(db, "users", user.uid);
+                await setDoc(userDocRef, {
+                    username: username,
+                    username_lowercase: username.toLowerCase(),
+                    email: email,
+                    createdAt: serverTimestamp(),
+                    profilePictureUrl: `https://placehold.co/128x128/1A1A1A/F9FAFB?text=${username.charAt(0).toUpperCase()}`,
+                    friends: [],
+                    friendRequestsSent: []
+                });
             } catch (error) {
-                console.error("Fetch Error:", error);
-                return "Sorry, I'm having trouble connecting to my services. Please check your internet connection.";
+                document.getElementById('register-error').textContent = error.message;
             }
-        }
+        });
+        
+        document.getElementById('logout-btn').addEventListener('click', () => { signOut(auth); });
 
+        const navButtons = document.querySelectorAll('.nav-btn');
+        const pages = document.querySelectorAll('.page');
+        navButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const pageId = button.dataset.page;
+                pages.forEach(page => page.classList.toggle('active', page.id === pageId));
+                navButtons.forEach(btn => {
+                    btn.classList.remove('active');
+                    btn.querySelector('svg').classList.add('text-text-secondary');
+                });
+                button.classList.add('active');
+                button.querySelector('svg').classList.remove('text-text-secondary');
+            });
+        });
 
-        function appendMessage(role, content) {
-            const messageWrapper = document.createElement('div');
-            messageWrapper.className = `flex items-start gap-3 ${role === 'user' ? 'justify-end' : ''}`;
-            
-            const contentHTML = `
-                <div class="chat-avatar">${role === 'user' ? 'U' : 'V'}</div>
-                <div class="chat-bubble ${role === 'user' ? 'bg-gray-800' : 'bg-gray-700'}">
-                    <p>${content}</p>
-                </div>
-            `;
-            
-            messageWrapper.innerHTML = contentHTML;
-            chatContainer.appendChild(messageWrapper);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
+        // --- POSTS ---
+        const postsContainer = document.getElementById('posts-container');
+        document.getElementById('create-post-btn').addEventListener('click', async () => {
+            const content = document.getElementById('post-content').value.trim();
+            if (content && currentUser) {
+                await addDoc(collection(db, 'posts'), {
+                    authorId: currentUser.uid, authorUsername: userData.username, authorProfilePic: userData.profilePictureUrl,
+                    content: content, timestamp: serverTimestamp(), likes: [], donations: 0, commentsCount: 0,
+                });
+                document.getElementById('post-content').value = '';
+            }
+        });
 
-        function appendThinkingMessage(id) {
-            const messageWrapper = document.createElement('div');
-            messageWrapper.id = id;
-            messageWrapper.className = 'flex items-start gap-3';
-
-            const contentHTML = `
-                <div class="chat-avatar gradient-bg">V</div>
-                <div class="bot-message-container">
-                    <div class="flex items-center justify-between cursor-pointer" onclick="document.getElementById('dd-${id}').classList.toggle('hidden')">
-                         <p class="chat-message-content thinking-content">Thinking<span class="thinking-animation"></span></p>
-                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                           <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                         </svg>
-                    </div>
-                    <div id="dd-${id}" class="thinking-dropdown hidden mt-2 pt-2 border-t border-gray-600 text-xs text-gray-400 space-y-1">
-                        <!-- Thinking process details here -->
-                    </div>
-                    <div class="chat-actions hidden mt-2 pt-2 border-t border-gray-600 flex items-center gap-4 text-gray-400">
-                        <!-- Action buttons will be added here -->
-                    </div>
-                </div>
-            `;
-            messageWrapper.innerHTML = contentHTML;
-            chatContainer.appendChild(messageWrapper);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+        function loadPosts() {
+            const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
+            onSnapshot(q, (snapshot) => {
+                postsContainer.innerHTML = '';
+                snapshot.forEach((doc) => postsContainer.innerHTML += createPostHTML({ id: doc.id, ...doc.data() }));
+            });
         }
         
-        function typeMessage(element, text) {
-            element.innerHTML = '';
-            let i = 0;
-            const interval = setInterval(() => {
-                if (i < text.length) {
-                    element.innerHTML += text.charAt(i);
-                    i++;
+        function createPostHTML(post) {
+            const isLiked = post.likes && post.likes.includes(currentUser.uid);
+            const timeAgo = post.timestamp ? timeSince(post.timestamp.toDate()) : 'just now';
+            return `<div class="bg-secondary p-5 rounded-xl shadow-lg animate-fadeIn">
+                    <div class="flex items-center mb-4"><img src="${post.authorProfilePic}" class="w-12 h-12 rounded-full mr-4"><div><p class="font-bold text-text-main">${post.authorUsername}</p><p class="text-xs text-text-secondary">${timeAgo}</p></div></div>
+                    <p class="text-text-main mb-4 whitespace-pre-wrap">${post.content}</p>
+                    <div class="flex justify-between items-center text-text-secondary border-t border-accent pt-3">
+                        <button class="flex items-center space-x-2 hover:text-highlight transition-colors" onclick="window.toggleLike('${post.id}')"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transition-transform ${isLiked ? 'text-danger fill-current transform scale-110' : ''}" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd" /></svg><span class="font-medium">${post.likes ? post.likes.length : 0}</span></button>
+                        <button class="flex items-center space-x-2 hover:text-highlight transition-colors" onclick="window.openComments('${post.id}')"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.08-3.239A8.962 8.962 0 012 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM4.5 10a6.5 6.5 0 1113 0 6.5 6.5 0 01-13 0z" clip-rule="evenodd" /></svg><span class="font-medium">${post.commentsCount || 0}</span></button>
+                        <button class="flex items-center space-x-2 hover:text-highlight transition-colors" onclick="window.openDonateModal('${post.id}')"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v.01M12 14v1m0-1c-1.11 0-2.08-.402-2.599-1M12 14c-1.657 0-3-.895-3-2s1.343-2 3-2m0 8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v.01M12 14v1m0-1c-1.11 0-2.08-.402-2.599-1" /></svg><span class="font-medium">$${post.donations || 0}</span></button>
+                    </div></div>`;
+        }
+
+        window.toggleLike = async (postId) => {
+            if (!currentUser) return;
+            const postRef = doc(db, "posts", postId);
+            const postDoc = await getDoc(postRef);
+            if (postDoc.exists()) {
+                const postData = postDoc.data();
+                if (postData.likes && postData.likes.includes(currentUser.uid)) {
+                    await updateDoc(postRef, { likes: arrayRemove(currentUser.uid) });
                 } else {
-                    clearInterval(interval);
-                    addActionsToMessage(element.closest('.bot-message-container'));
+                    await updateDoc(postRef, { likes: arrayUnion(currentUser.uid) });
                 }
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-            }, 30);
-        }
+            }
+        };
 
-        function addActionsToMessage(bubbleElement) {
-            if (!bubbleElement) return;
-            const actionsContainer = bubbleElement.querySelector('.chat-actions');
-            const content = bubbleElement.querySelector('.chat-message-content').textContent;
-
-            actionsContainer.innerHTML = `
-                <button title="Copy"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg></button>
-                <button title="Text-to-Speech"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clip-rule="evenodd" /></svg></button>
-                <button title="Like"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z" /></svg></button>
-                <button title="Dislike"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M18 9.5a1.5 1.5 0 11-3 0v-6a1.5 1.5 0 013 0v6zM14 9.667v-5.43a2 2 0 00-1.106-1.79l-.05-.025A4 4 0 0011.057 2H5.642a2 2 0 00-1.962 1.608l-1.2 6A2 2 0 004.44 12H8v4a2 2 0 002 2 1 1 0 001-1v-.667a4 4 0 01.8-2.4l1.2-2.4a4 4 0 00.8-2.4z" /></svg></button>
-            `;
-            actionsContainer.querySelector('button:nth-child(1)').onclick = () => copyToClipboard(content);
-            actionsContainer.querySelector('button:nth-child(2)').onclick = () => speakText(content);
-        }
-
-        // --- Utility Functions ---
-        
-        function createNewChat() {
-            const newId = `chat-${Date.now()}`;
-            currentChatId = newId;
-            chats[newId] = { id: newId, title: 'New Chat', messages: [] };
-            chatContainer.innerHTML = '';
-            welcomeScreen.classList.remove('hidden');
-            updateRecentChats();
-            setActiveChat(newId);
-            saveChats();
-        }
-
-        function loadChat(chatId) {
-            if (!chats[chatId]) return;
-            currentChatId = chatId;
-            const chat = chats[chatId];
-            chatContainer.innerHTML = '';
-            
-            if (chat.messages.length === 0) {
-                 welcomeScreen.classList.remove('hidden');
-            } else {
-                 welcomeScreen.classList.add('hidden');
-                 chat.messages.forEach(msg => {
-                    if (msg.role === 'user') {
-                        appendMessage(msg.role, msg.content);
-                    } else {
-                        // For past bot messages, display them instantly
-                        appendInstantBotMessage(msg.content);
-                    }
+        // --- MODALS (Donate, Comments, New Chat) ---
+        const donateModal = document.getElementById('donate-modal');
+        const commentsModal = document.getElementById('comments-modal');
+        const newChatModal = document.getElementById('new-chat-modal');
+        window.openDonateModal = (postId) => {
+            document.getElementById('donate-post-id').value = postId; donateModal.style.display = 'flex';
+        };
+        document.getElementById('cancel-donation').addEventListener('click', () => { donateModal.style.display = 'none'; });
+        document.getElementById('confirm-donation').addEventListener('click', async () => {
+            const postId = document.getElementById('donate-post-id').value;
+            const amount = parseFloat(document.getElementById('donate-amount').value);
+            if (postId && amount > 0) {
+                await updateDoc(doc(db, "posts", postId), { donations: increment(amount) });
+                document.getElementById('donate-amount').value = ''; donateModal.style.display = 'none';
+            }
+        });
+        window.openComments = (postId) => {
+            document.getElementById('comment-post-id').value = postId; loadComments(postId); commentsModal.style.display = 'flex';
+        };
+        document.getElementById('close-comments-modal').addEventListener('click', () => { commentsModal.style.display = 'none'; });
+        document.getElementById('submit-comment').addEventListener('click', async () => {
+             const postId = document.getElementById('comment-post-id').value;
+             const text = document.getElementById('comment-input').value.trim();
+             if(text){
+                 await addDoc(collection(db, 'posts', postId, 'comments'), {
+                     authorId: currentUser.uid, authorUsername: userData.username, text: text, timestamp: serverTimestamp()
                  });
-            }
-            setActiveChat(chatId);
+                 await updateDoc(doc(db, 'posts', postId), { commentsCount: increment(1) });
+                 document.getElementById('comment-input').value = '';
+             }
+        });
+        function loadComments(postId) {
+            const q = query(collection(db, 'posts', postId, 'comments'), orderBy('timestamp', 'asc'));
+            onSnapshot(q, (snapshot) => {
+                const list = document.getElementById('comments-list');
+                list.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const comment = doc.data();
+                    list.innerHTML += `<div class="bg-accent/50 p-3 rounded-lg"><div class="flex justify-between items-baseline"><p class="font-semibold text-sm text-highlight">${comment.authorUsername}</p><p class="text-xs text-text-secondary">${timeSince(comment.timestamp.toDate())}</p></div><p class="text-text-main mt-1">${comment.text}</p></div>`;
+                });
+                list.scrollTop = list.scrollHeight;
+            });
         }
+        document.getElementById('new-chat-btn').addEventListener('click', async () => {
+            const friendsListContainer = document.getElementById('friends-chat-list');
+            friendsListContainer.innerHTML = 'Loading friends...';
+            if (!userData || !userData.friends || userData.friends.length === 0) {
+                friendsListContainer.innerHTML = `<p class="text-text-secondary text-center">You have no friends to chat with. Add some!</p>`;
+                newChatModal.style.display = 'flex';
+                return;
+            }
+            const friendsQuery = query(collection(db, 'users'), where('__name__', 'in', userData.friends));
+            const friendsSnapshot = await getDocs(friendsQuery);
+            friendsListContainer.innerHTML = '';
+            friendsSnapshot.forEach(doc => {
+                 const friend = { id: doc.id, ...doc.data() };
+                 friendsListContainer.innerHTML += `<div onclick="window.startChat('${friend.id}')" class="flex items-center p-3 hover:bg-accent rounded-lg cursor-pointer"><img src="${friend.profilePictureUrl}" class="w-10 h-10 rounded-full mr-3"><p>${friend.username}</p></div>`;
+            });
+            newChatModal.style.display = 'flex';
+        });
+        document.getElementById('close-new-chat-modal').addEventListener('click', () => { newChatModal.style.display = 'none'; });
         
-         function appendInstantBotMessage(content) {
-            const messageWrapper = document.createElement('div');
-            messageWrapper.className = 'flex items-start gap-3';
+        // --- MESSAGES (inside People Page) ---
+        const conversationsContainer = document.getElementById('conversations-container');
+        const chatView = document.getElementById('chat-view');
+        const conversationsView = document.getElementById('conversations-view');
+        
+        window.startChat = async (otherUserId) => {
+            const chatId = currentUser.uid < otherUserId ? `${currentUser.uid}_${otherUserId}` : `${otherUserId}_${currentUser.uid}`;
+            const chatRef = doc(db, 'chats', chatId);
+            const chatSnap = await getDoc(chatRef);
+            if (!chatSnap.exists()) {
+                await setDoc(chatRef, {
+                    members: [currentUser.uid, otherUserId],
+                    lastMessage: serverTimestamp()
+                });
+            }
+            newChatModal.style.display = 'none';
+            // Switch to people tab and open conversation
+            document.querySelector('[data-page="people-page"]').click();
+            openConversation(chatId);
+        };
+
+        function loadConversations() {
+            const q = query(collection(db, 'chats'), where('members', 'array-contains', currentUser.uid));
+            onSnapshot(q, async (snapshot) => {
+                if (snapshot.empty) {
+                    conversationsContainer.innerHTML = `<p class="text-text-secondary text-center mt-10">No conversations yet. Start a new one with a friend!</p>`;
+                    return;
+                }
+                
+                let conversations = [];
+                snapshot.forEach(doc => conversations.push({ id: doc.id, ...doc.data() }));
+                conversations.sort((a, b) => (b.lastMessage?.toDate() || 0) - (a.lastMessage?.toDate() || 0));
+
+                let html = '';
+                for (const chat of conversations) {
+                    const otherUserId = chat.members.find(id => id !== currentUser.uid);
+                    if (otherUserId) {
+                        const userSnap = await getDoc(doc(db, 'users', otherUserId));
+                        if (userSnap.exists()){
+                            const otherUser = userSnap.data();
+                            html += `<div onclick="window.openConversation('${chat.id}')" class="flex items-center p-3 hover:bg-accent rounded-lg cursor-pointer"><img src="${otherUser.profilePictureUrl}" class="w-12 h-12 rounded-full mr-4"><div><p class="font-bold">${otherUser.username}</p><p class="text-sm text-text-secondary">Click to open chat</p></div></div>`;
+                        }
+                    }
+                }
+                conversationsContainer.innerHTML = html;
+            });
+        }
+        window.openConversation = async (chatId) => {
+            if (messageUnsubscribe) messageUnsubscribe();
+            activeChatId = chatId;
+            conversationsView.classList.add('hidden');
+            chatView.classList.remove('hidden');
+            const chatDoc = await getDoc(doc(db, 'chats', chatId));
+            const otherUserId = chatDoc.data().members.find(id => id !== currentUser.uid);
+            const userSnap = await getDoc(doc(db, 'users', otherUserId));
+            const otherUser = userSnap.data();
+            document.getElementById('chat-name').innerText = otherUser.username;
+            document.getElementById('chat-pic').src = otherUser.profilePictureUrl;
+
+            const messagesContainer = document.getElementById('messages-container');
+            const messagesRef = collection(db, 'chats', chatId, 'messages');
+            const q = query(messagesRef, orderBy('timestamp', 'asc'));
+            messageUnsubscribe = onSnapshot(q, snapshot => {
+                messagesContainer.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const msg = doc.data();
+                    const bubbleClass = msg.senderId === currentUser.uid ? 'chat-bubble-sent' : 'chat-bubble-received';
+                    messagesContainer.innerHTML += `<div class="p-3 rounded-xl max-w-xs ${bubbleClass}">${msg.text}</div>`;
+                });
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            });
+        };
+        document.getElementById('send-message-btn').addEventListener('click', async () => {
+            const text = document.getElementById('message-input').value.trim();
+            if (text && activeChatId) {
+                await addDoc(collection(db, 'chats', activeChatId, 'messages'), {
+                    senderId: currentUser.uid, text: text, timestamp: serverTimestamp()
+                });
+                await updateDoc(doc(db, 'chats', activeChatId), { lastMessage: serverTimestamp() });
+                document.getElementById('message-input').value = '';
+            }
+        });
+        document.getElementById('back-to-conversations-btn').addEventListener('click', () => {
+            if (messageUnsubscribe) messageUnsubscribe();
+            activeChatId = null;
+            chatView.classList.add('hidden');
+            conversationsView.classList.remove('hidden');
+        });
+
+        // --- GROUPS ---
+        const groupsListView = document.getElementById('groups-list-view');
+        const createGroupView = document.getElementById('create-group-view');
+        const groupChatView = document.getElementById('group-chat-view');
+        document.getElementById('show-create-group-btn').addEventListener('click', () => {
+            groupsListView.classList.add('hidden'); createGroupView.classList.remove('hidden');
+        });
+        document.getElementById('cancel-create-group-btn').addEventListener('click', () => {
+            createGroupView.classList.add('hidden'); groupsListView.classList.remove('hidden');
+        });
+        document.getElementById('create-group-btn').addEventListener('click', async () => {
+            const name = document.getElementById('group-name').value.trim();
+            const description = document.getElementById('group-description').value.trim();
+            if(name){
+                await addDoc(collection(db, 'groups'), {
+                    name: name, description: description, createdAt: serverTimestamp(),
+                    creatorId: currentUser.uid, members: [currentUser.uid], lastMessage: serverTimestamp()
+                });
+                document.getElementById('group-name').value = '';
+                document.getElementById('group-description').value = '';
+                createGroupView.classList.add('hidden');
+                groupsListView.classList.remove('hidden');
+            }
+        });
+
+        function loadGroups() {
+            const q = query(collection(db, 'groups'), where('members', 'array-contains', currentUser.uid));
+            onSnapshot(q, snapshot => {
+                const container = document.getElementById('my-groups-container');
+                if(!container) return;
+                
+                let groups = [];
+                snapshot.forEach(doc => {
+                    groups.push({ id: doc.id, ...doc.data() });
+                });
+                groups.sort((a, b) => (b.lastMessage?.toDate() || 0) - (a.lastMessage?.toDate() || 0));
+
+                if(groups.length === 0) {
+                    container.innerHTML = `<p class="text-text-secondary text-center mt-10">You are not in any group. Create one!</p>`;
+                    return;
+                }
+                
+                container.innerHTML = '';
+                groups.forEach(group => {
+                    container.innerHTML += `<div onclick="window.openGroup('${group.id}')" class="flex items-center p-3 hover:bg-accent rounded-lg cursor-pointer"><div class="w-12 h-12 rounded-full mr-4 bg-accent flex items-center justify-center font-bold text-xl">${group.name.charAt(0)}</div><div><p class="font-bold">${group.name}</p><p class="text-sm text-text-secondary">${group.description.substring(0, 30)}...</p></div></div>`;
+                });
+            });
+        }
+        window.openGroup = async (groupId) => {
+            if (groupMessageUnsubscribe) groupMessageUnsubscribe();
+            activeGroupId = groupId;
+            groupsListView.classList.add('hidden');
+            groupChatView.classList.remove('hidden');
+            const groupDoc = await getDoc(doc(db, 'groups', groupId));
+            const group = groupDoc.data();
+            document.getElementById('group-chat-name').innerText = group.name;
+            document.getElementById('group-chat-pic').src = `https://placehold.co/128x128/1A1A1A/F9FAFB?text=${group.name.charAt(0)}`;
             
-            const contentHTML = `
-                <div class="chat-avatar gradient-bg">V</div>
-                <div class="bot-message-container">
-                    <p class="chat-message-content">${content}</p>
-                     <div class="chat-actions mt-2 pt-2 border-t border-gray-600 flex items-center gap-4 text-gray-400">
-                     </div>
-                </div>
-            `;
-            messageWrapper.innerHTML = contentHTML;
-            chatContainer.appendChild(messageWrapper);
-            addActionsToMessage(messageWrapper.querySelector('.bot-message-container'));
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+            const messagesContainer = document.getElementById('group-messages-container');
+            const messagesRef = collection(db, 'groups', groupId, 'messages');
+            const q = query(messagesRef, orderBy('timestamp', 'asc'));
+            groupMessageUnsubscribe = onSnapshot(q, snapshot => {
+                messagesContainer.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const msg = doc.data();
+                    const bubbleClass = msg.senderId === currentUser.uid ? 'chat-bubble-sent' : 'chat-bubble-received';
+                    const senderName = msg.senderId === currentUser.uid ? '' : `<p class="text-xs text-highlight mb-1">${msg.senderUsername}</p>`;
+                    messagesContainer.innerHTML += `<div class="p-3 rounded-xl max-w-xs ${bubbleClass}">${senderName}${msg.text}</div>`;
+                });
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            });
+        };
+        document.getElementById('send-group-message-btn').addEventListener('click', async () => {
+            const text = document.getElementById('group-message-input').value.trim();
+            if(text && activeGroupId){
+                 await addDoc(collection(db, 'groups', activeGroupId, 'messages'), {
+                    senderId: currentUser.uid, senderUsername: userData.username, text: text, timestamp: serverTimestamp()
+                });
+                await updateDoc(doc(db, 'groups', activeGroupId), { lastMessage: serverTimestamp() });
+                document.getElementById('group-message-input').value = '';
+            }
+        });
+        document.getElementById('back-to-groups-btn').addEventListener('click', () => {
+            if (groupMessageUnsubscribe) groupMessageUnsubscribe();
+            activeGroupId = null;
+            groupChatView.classList.add('hidden');
+            groupsListView.classList.remove('hidden');
+        });
+
+        // --- FRIENDS (inside People page) ---
+        const peopleTabs = {
+            messages: document.getElementById('messages-view'),
+            friends: document.getElementById('my-friends-view'),
+            requests: document.getElementById('friend-requests-view'),
+            find: document.getElementById('find-people-view')
+        };
+        window.switchPeopleTab = (tab) => {
+            Object.values(peopleTabs).forEach(view => view.classList.add('hidden'));
+            document.querySelectorAll('.people-tab').forEach(t => t.classList.remove('active'));
+            peopleTabs[tab].classList.remove('hidden');
+            document.getElementById(`people-tab-${tab}`).classList.add('active');
+        };
+
+        async function loadMyFriends() {
+            const container = document.getElementById('my-friends-list');
+            if (!userData || !userData.friends || userData.friends.length === 0) {
+                container.innerHTML = `<p class="text-text-secondary text-center">You haven't added any friends yet.</p>`;
+                return;
+            }
+            const friendsQuery = query(collection(db, 'users'), where('__name__', 'in', userData.friends));
+            const friendsSnapshot = await getDocs(friendsQuery);
+            container.innerHTML = '';
+            friendsSnapshot.forEach(doc => {
+                const friend = { id: doc.id, ...doc.data() };
+                container.innerHTML += `<div class="flex items-center justify-between p-3 bg-accent rounded-lg">
+                    <div class="flex items-center"><img src="${friend.profilePictureUrl}" class="w-10 h-10 rounded-full mr-3"><p>${friend.username}</p></div>
+                    <button class="btn-primary !py-1 !px-3 text-sm" onclick="window.startChat('${friend.id}')">Message</button>
+                </div>`;
+            });
         }
 
-        function updateRecentChats() {
-            recentChatsContainer.innerHTML = '';
-            Object.values(chats).reverse().forEach(chat => {
-                const chatLink = document.createElement('div');
-                chatLink.className = 'recent-chat-link';
-                chatLink.dataset.id = chat.id;
-                chatLink.textContent = chat.messages.length > 0 ? chat.messages[0].content.substring(0, 25) + '...' : chat.title;
-                if (chat.id === currentChatId) {
-                    chatLink.classList.add('active');
+        function loadFriendRequests() {
+            const requestsRef = collection(db, 'users', currentUser.uid, 'friendRequests');
+            const q = query(requestsRef, where('status', '==', 'pending'));
+            onSnapshot(q, (snapshot) => {
+                const container = document.getElementById('friend-requests-list');
+                const badge = document.getElementById('friend-requests-badge');
+                if (snapshot.empty) {
+                    container.innerHTML = `<p class="text-text-secondary text-center">No new friend requests.</p>`;
+                    badge.classList.add('hidden');
+                    return;
                 }
-                chatLink.onclick = () => loadChat(chat.id);
-                recentChatsContainer.appendChild(chatLink);
+                badge.classList.remove('hidden');
+                badge.textContent = snapshot.size;
+                container.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const req = { id: doc.id, ...doc.data() };
+                    container.innerHTML += `<div class="flex items-center justify-between p-3 bg-accent rounded-lg">
+                        <div class="flex items-center"><img src="${req.senderProfilePic}" class="w-10 h-10 rounded-full mr-3"><p>${req.senderUsername}</p></div>
+                        <div class="flex space-x-2">
+                            <button class="bg-success hover:bg-green-600 text-white font-bold py-1 px-3 rounded-lg" onclick="window.acceptFriendRequest('${req.senderId}')">Accept</button>
+                            <button class="bg-danger hover:bg-red-600 text-white font-bold py-1 px-3 rounded-lg" onclick="window.declineFriendRequest('${req.senderId}')">Decline</button>
+                        </div>
+                    </div>`;
+                });
             });
         }
         
-        function setActiveChat(chatId) {
-            document.querySelectorAll('.recent-chat-link').forEach(link => {
-                link.classList.remove('active');
-                if (link.dataset.id === chatId) {
-                    link.classList.add('active');
+        window.sendFriendRequest = async (recipientId) => {
+            const requestRef = doc(db, 'users', recipientId, 'friendRequests', currentUser.uid);
+            await setDoc(requestRef, {
+                senderId: currentUser.uid,
+                senderUsername: userData.username,
+                senderProfilePic: userData.profilePictureUrl,
+                status: 'pending',
+                createdAt: serverTimestamp()
+            });
+            const userRef = doc(db, 'users', currentUser.uid);
+            await updateDoc(userRef, { friendRequestsSent: arrayUnion(recipientId) });
+            document.getElementById(`add-friend-btn-${recipientId}`).textContent = 'Request Sent';
+            document.getElementById(`add-friend-btn-${recipientId}`).disabled = true;
+        };
+
+        window.acceptFriendRequest = async (senderId) => {
+            const batch = writeBatch(db);
+            const currentUserRef = doc(db, 'users', currentUser.uid);
+            batch.update(currentUserRef, { friends: arrayUnion(senderId) });
+            const senderRef = doc(db, 'users', senderId);
+            batch.update(senderRef, { friends: arrayUnion(currentUser.uid), friendRequestsSent: arrayRemove(currentUser.uid) });
+            const requestRef = doc(db, 'users', currentUser.uid, 'friendRequests', senderId);
+            batch.delete(requestRef);
+            await batch.commit();
+        };
+
+        window.declineFriendRequest = async (senderId) => {
+             const batch = writeBatch(db);
+             const requestRef = doc(db, 'users', currentUser.uid, 'friendRequests', senderId);
+             batch.delete(requestRef);
+             const senderRef = doc(db, 'users', senderId);
+             batch.update(senderRef, { friendRequestsSent: arrayRemove(currentUser.uid) });
+             await batch.commit();
+        };
+        
+        document.getElementById('search-users-input').addEventListener('input', async (e) => {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            const resultsContainer = document.getElementById('search-results-list');
+            if (searchTerm.length < 2) {
+                resultsContainer.innerHTML = '';
+                return;
+            }
+            const usersRef = collection(db, 'users');
+            const q = query(usersRef, where('username_lowercase', '>=', searchTerm), where('username_lowercase', '<=', searchTerm + '\uf8ff'));
+            const userSnapshot = await getDocs(q);
+            resultsContainer.innerHTML = '';
+            userSnapshot.forEach(doc => {
+                const user = {id: doc.id, ...doc.data()};
+                if (user.id === currentUser.uid) return;
+                
+                let buttonHtml = `<button id="add-friend-btn-${user.id}" class="btn-primary !py-1 !px-3 text-sm" onclick="window.sendFriendRequest('${user.id}')">Add Friend</button>`;
+                if (userData.friends && userData.friends.includes(user.id)) {
+                    buttonHtml = `<span class="text-sm font-medium text-success">Friends</span>`;
+                } else if (userData.friendRequestsSent && userData.friendRequestsSent.includes(user.id)) {
+                    buttonHtml = `<button id="add-friend-btn-${user.id}" class="btn-primary !py-1 !px-3 text-sm" disabled>Request Sent</button>`;
                 }
-            });
-        }
 
-        function calculateCost(responseText) {
-            const length = responseText.length;
-            if (length < 200) { // Short answer
-                return parseFloat((Math.random() * (0.20 - 0.10) + 0.10).toFixed(2));
-            } else { // Long answer
-                return parseFloat((Math.random() * (0.40 - 0.21) + 0.21).toFixed(2));
+                resultsContainer.innerHTML += `<div class="flex items-center justify-between p-3 bg-accent rounded-lg">
+                    <div class="flex items-center"><img src="${user.profilePictureUrl}" class="w-10 h-10 rounded-full mr-3"><p>${user.username}</p></div>
+                    ${buttonHtml}
+                </div>`;
+            });
+        });
+
+        // --- MARKETPLACE & PROFILE ---
+        function loadMarketplaceItems() {
+             const q = query(collection(db, 'marketplace'), orderBy('createdAt', 'desc'));
+             onSnapshot(q, (snapshot) => {
+                const container = document.getElementById('marketplace-items-container');
+                container.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const item = {id: doc.id, ...doc.data()};
+                    container.innerHTML += `<div class="bg-secondary p-4 rounded-xl shadow-lg transition-transform hover:scale-105"><div class="bg-accent h-48 w-full rounded-lg mb-4 flex items-center justify-center text-text-secondary">Item Image</div><h3 class="font-bold text-lg text-text-main truncate">${item.name}</h3><p class="font-semibold text-xl" style="background: linear-gradient(90deg, rgba(0,251,255,1) 0%, rgba(0,42,250,1) 50%, rgba(255,0,212,1) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">$${item.price}</p><p class="text-text-secondary text-sm h-10 overflow-hidden mb-2">${item.description}</p><p class="text-xs text-text-secondary">Sold by: ${item.sellerUsername}</p></div>`;
+                });
+             });
+        }
+        document.getElementById('add-item-btn').addEventListener('click', async () => {
+            const name = document.getElementById('item-name').value, desc = document.getElementById('item-description').value, price = parseFloat(document.getElementById('item-price').value);
+            if(name && desc && price > 0){
+                 await addDoc(collection(db, 'marketplace'), {
+                    sellerId: currentUser.uid, sellerUsername: userData.username, name: name, description: desc, price: price, createdAt: serverTimestamp()
+                 });
+                 document.getElementById('item-name').value = ''; document.getElementById('item-description').value = ''; document.getElementById('item-price').value = '';
+            }
+        });
+        function setupProfilePage() {
+            if(userData) {
+                document.getElementById('profile-pic').src = userData.profilePictureUrl;
+                document.getElementById('profile-username').textContent = userData.username;
+                document.getElementById('profile-email').textContent = userData.email;
+                document.getElementById('profile-friends-count').textContent = userData.friends ? userData.friends.length : 0;
             }
         }
-
-        function updateCredits(newBalance) {
-            credits = Math.max(0, newBalance);
-            dropdownCreditDisplay.textContent = credits.toFixed(2);
-        }
-
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                // Optional: Show a notification
-            });
-        }
-
-        function speakText(text) {
-             if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'en-US';
-                window.speechSynthesis.speak(utterance);
-            } else {
-                alert('Your browser does not support text-to-speech.');
-            }
-        }
-
-        function updateModelLockStatus() {
-            const planHierarchy = { 'Free': 0, 'Pro': 1, 'Max': 2, 'Team': 2 };
-            const userLevel = planHierarchy[currentUserPlan];
-
-            modelDropdownItems.forEach(item => {
-                const requiredPlan = item.dataset.requiredPlan;
-                if (!requiredPlan) return;
-
-                const requiredLevel = planHierarchy[requiredPlan];
-                const lockIcon = item.querySelector('.lock-icon');
-
-                if (requiredLevel > userLevel) {
-                    item.classList.add('locked');
-                    if(lockIcon) lockIcon.classList.remove('hidden');
+        function loadMyPosts() {
+            if (!currentUser) return;
+            const q = query(collection(db, 'posts'), where('authorId', '==', currentUser.uid));
+            onSnapshot(q, (snapshot) => {
+                const container = document.getElementById('my-posts-container');
+                container.innerHTML = '';
+                if (snapshot.empty) {
+                    container.innerHTML = `<p class="text-text-secondary text-center">You haven't posted anything yet.</p>`;
                 } else {
-                    item.classList.remove('locked');
-                    if(lockIcon) lockIcon.classList.add('hidden');
+                    const posts = []; snapshot.forEach(doc => posts.push({ id: doc.id, ...doc.data() }));
+                    posts.sort((a, b) => b.timestamp.toDate() - a.timestamp.toDate());
+                    posts.forEach(post => container.innerHTML += createPostHTML(post));
                 }
             });
         }
-
-        function updatePremiumModalUI() {
-            planSelectorBtns.forEach(btn => {
-                btn.classList.remove('active-plan');
-                btn.textContent = btn.dataset.plan === "Team" ? "Contact Us" : "Upgrade";
-                if (btn.dataset.plan === currentUserPlan) {
-                    btn.classList.add('active-plan');
-                    btn.textContent = 'Current Plan';
-                }
-            });
-        }
-
-        // --- Local Storage Persistence ---
-        function saveChats() {
-            localStorage.setItem('vaultyChats', JSON.stringify(chats));
-            updateRecentChats();
-        }
-
-        function loadChatsFromStorage() {
-            const storedChats = localStorage.getItem('vaultyChats');
-            if (storedChats) {
-                chats = JSON.parse(storedChats);
-                const chatIds = Object.keys(chats);
-                if (chatIds.length > 0) {
-                    currentChatId = chatIds[chatIds.length - 1]; // Load last active chat
-                    loadChat(currentChatId);
-                }
-            }
-            updateRecentChats();
-        }
-
-        // --- Initial Load ---
-        function initializeUI() {
-            loadChatsFromStorage();
-            if(!currentChatId) {
-                 welcomeScreen.classList.remove('hidden');
-            } else {
-                welcomeScreen.classList.add('hidden');
-            }
-
-            // Set initial sidebar state based on screen size
-            if (window.innerWidth < 1024) {
-                appContainer.classList.add('sidebar-collapsed');
-            }
-        }
         
-        initializeUI();
-        
+        function timeSince(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            let interval = seconds / 31536000; if (interval > 1) return Math.floor(interval) + " years ago";
+            interval = seconds / 2592000; if (interval > 1) return Math.floor(interval) + " months ago";
+            interval = seconds / 86400; if (interval > 1) return Math.floor(interval) + " days ago";
+            interval = seconds / 3600; if (interval > 1) return Math.floor(interval) + " hours ago";
+            interval = seconds / 60; if (interval > 1) return Math.floor(interval) + " minutes ago";
+            return "just now";
+        }
     </script>
-    <style>
-        .chat-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 9999px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: white;
-            flex-shrink: 0;
-        }
-        .flex.items-start .chat-avatar {
-            background-color: #374151;
-        }
-        .flex.justify-end .chat-avatar {
-            background-color: #1F2937;
-        }
-        .gradient-bg {
-            background: linear-gradient(90deg, rgba(0, 251, 255, 1) 0%, rgba(0, 42, 250, 1) 50%, rgba(255, 0, 212, 1) 100%);
-        }
-        .chat-bubble {
-            max-width: 80%;
-            padding: 0.75rem 1rem;
-            border-radius: 1.25rem;
-            line-height: 1.6;
-        }
-        .flex.items-start .chat-bubble {
-            border-top-left-radius: 0.5rem;
-        }
-        .flex.justify-end .chat-bubble {
-            border-top-right-radius: 0.5rem;
-        }
-        .recent-chat-link {
-            padding: 0.5rem 0.75rem;
-            border-radius: 0.5rem;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            color: #D1D5DB;
-            font-size: 0.875rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .recent-chat-link:hover {
-            background-color: #374151;
-        }
-        .recent-chat-link.active {
-            background-color: #4B5563;
-            color: #F9FAFB;
-            font-weight: 500;
-        }
-        .chat-actions button {
-            transition: color 0.2s;
-        }
-        .chat-actions button:hover {
-            color: #F9FAFB;
-        }
-        .bot-message-container {
-            max-width: 60%;
-            line-height: 1.6;
-        }
-    </style>
 </body>
-
 </html>
-
 
