@@ -39,6 +39,7 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
         .log-entry-new { animation: fadeIn 0.5s ease-out; }
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #111; }
@@ -60,6 +61,12 @@
         .tab-btn.active {
             color: white;
             border-bottom-color: rgba(0, 251, 255, 1);
+        }
+        .modal {
+            animation: modalFadeIn 0.3s ease-out;
+        }
+        .modal-content {
+            animation: fadeIn 0.3s ease-out;
         }
     </style>
 </head>
@@ -88,7 +95,7 @@
 
         <!-- STATS -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div class="card rounded-2xl p-6"><h3 class="text-sm font-medium text-gray-400 uppercase">Wallet Balance</h3><p id="wallet-balance" class="text-3xl font-bold text-white mt-2">... <span id="native-symbol">SOL</span></p></div>
+            <div id="wallet-balance-card" class="card rounded-2xl p-6 cursor-pointer"><h3 class="text-sm font-medium text-gray-400 uppercase">Wallet Balance</h3><p id="wallet-balance" class="text-3xl font-bold text-white mt-2">... <span id="native-symbol">SOL</span></p></div>
             <div class="card rounded-2xl p-6"><h3 class="text-sm font-medium text-gray-400 uppercase">Realized Profit (PnL)</h3><p id="pnl-value" class="text-3xl font-bold text-gray-400 mt-2">+0.00 <span id="pnl-symbol">SOL</span></p></div>
             <div class="card rounded-2xl p-6"><h3 class="text-sm font-medium text-gray-400 uppercase">Trades Completed</h3><p id="trade-count" class="text-3xl font-bold text-white mt-2">0</p></div>
             <div class="card rounded-2xl p-6"><h3 class="text-sm font-medium text-gray-400 uppercase">Win Rate</h3><p id="win-rate" class="text-3xl font-bold text-white mt-2">N/A</p></div>
@@ -135,6 +142,35 @@
         <footer class="text-center py-6 text-gray-500 text-sm mt-8"><p>&copy; 2025 - Standalone Crypto Sniper Bot.</p></footer>
     </div>
 
+    <!-- MODALS -->
+    <div id="buy-crypto-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 modal">
+        <div class="card modal-content rounded-2xl p-6 w-full max-w-md relative border-cyan-500/20">
+            <button id="close-modal-btn" class="absolute top-4 right-4 text-gray-500 hover:text-white text-2xl font-bold">&times;</button>
+            <h2 id="modal-title" class="text-2xl font-bold text-white mb-6 text-center">Buy SOL</h2>
+            <div id="payment-options-container" class="space-y-4"></div>
+        </div>
+    </div>
+    
+    <div id="checkout-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 modal">
+        <div class="card modal-content rounded-2xl p-6 w-full max-w-md relative border-fuchsia-500/20">
+            <button id="close-checkout-btn" class="absolute top-4 right-4 text-gray-500 hover:text-white text-2xl font-bold">&times;</button>
+            <h2 id="checkout-title" class="text-2xl font-bold text-white mb-2 text-center">Purchase Simulation</h2>
+            <p id="checkout-provider" class="text-sm text-center text-gray-400 mb-6">via Credit/Debit Card</p>
+
+            <div class="space-y-4">
+                 <div>
+                     <label for="purchase-amount" class="block text-sm font-medium text-gray-400 mb-2">Amount to Buy (<span id="purchase-symbol">SOL</span>)</label>
+                     <input type="number" id="purchase-amount" placeholder="1.0" class="w-full bg-black/30 border border-gray-700 rounded-lg p-3 focus:ring-2 focus:ring-fuchsia-500 focus:outline-none text-sm">
+                 </div>
+                 <div class="text-xs text-gray-500 p-3 bg-black/20 rounded-lg">
+                    <p><strong>Disclaimer:</strong> This is a simulation. No real transaction will occur. Do not enter real payment information.</p>
+                 </div>
+                 <button id="confirm-purchase-btn" class="w-full gradient-bg text-white font-bold py-3 px-8 rounded-lg">Confirm Purchase</button>
+            </div>
+        </div>
+    </div>
+
+
     <script>
         // --- DOM ELEMENTS ---
         const connectWalletBtn = document.getElementById('connect-wallet-btn');
@@ -150,7 +186,6 @@
         const pnlValueEl = document.getElementById('pnl-value');
         const tradeCountEl = document.getElementById('trade-count');
         const winRateEl = document.getElementById('win-rate');
-        const nativeSymbolEls = [document.getElementById('native-symbol'), document.getElementById('pnl-symbol')];
         const networkSelector = document.getElementById('network-selector');
         const logTab = document.getElementById('log-tab');
         const tradingTab = document.getElementById('trading-tab');
@@ -159,55 +194,40 @@
         const tokenAddressInput = document.getElementById('token-address');
         const buyAmountInput = document.getElementById('buy-amount');
         const buyAmountSymbol = document.getElementById('buy-amount-symbol');
+        const walletBalanceCard = document.getElementById('wallet-balance-card');
+        const buyCryptoModal = document.getElementById('buy-crypto-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const modalTitle = document.getElementById('modal-title');
+        const paymentOptionsContainer = document.getElementById('payment-options-container');
+        const checkoutModal = document.getElementById('checkout-modal');
+        const closeCheckoutBtn = document.getElementById('close-checkout-btn');
+        const checkoutTitle = document.getElementById('checkout-title');
+        const checkoutProvider = document.getElementById('checkout-provider');
+        const purchaseAmountInput = document.getElementById('purchase-amount');
+        const purchaseSymbol = document.getElementById('purchase-symbol');
+        const confirmPurchaseBtn = document.getElementById('confirm-purchase-btn');
 
 
         // --- CHAIN CONFIGURATIONS ---
         const chains = {
-            solana: {
-                name: 'Solana',
-                symbol: 'SOL',
-                type: 'solana',
-                nodeUrl: 'https://api.mainnet-beta.solana.com',
-                wsUrl: 'wss://api.mainnet-beta.solana.com',
-                factoryAddress: '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8', // Raydium Liquidity Pool V4
-                chainId: null,
-            },
-            ethereum: {
-                name: 'Ethereum',
-                symbol: 'ETH',
-                type: 'evm',
-                nodeUrl: 'https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161', // Public Infura
-                wsUrl: 'wss://mainnet.infura.io/ws/v3/9aa3d95b3bc440fa88ea12eaa4456161',
-                factoryAddress: '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', // Uniswap V2 Factory
-                chainId: 1,
-            },
-            bnb: {
-                name: 'BNB Smart Chain',
-                symbol: 'BNB',
-                type: 'evm',
-                nodeUrl: 'https://bsc-dataseed.binance.org/',
-                wsUrl: 'wss://bsc-ws-node.nariox.org:443',
-                factoryAddress: '0xcA143Ce32fC7BFf22703467Fcb83841C48d88AC3', // PancakeSwap V2 Factory
-                chainId: 56,
-            }
+            solana: { name: 'Solana', symbol: 'SOL', type: 'solana', nodeUrl: 'https://api.mainnet-beta.solana.com', wsUrl: 'wss://api.mainnet-beta.solana.com', factoryAddress: '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8', chainId: null },
+            ethereum: { name: 'Ethereum', symbol: 'ETH', type: 'evm', nodeUrl: 'https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161', wsUrl: 'wss://mainnet.infura.io/ws/v3/9aa3d95b3bc440fa88ea12eaa4456161', factoryAddress: '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', chainId: 1 },
+            bnb: { name: 'BNB Smart Chain', symbol: 'BNB', type: 'evm', nodeUrl: 'https://bsc-dataseed.binance.org/', wsUrl: 'wss://bsc-ws-node.nariox.org:443', factoryAddress: '0xcA143Ce32fC7BFf22703467Fcb83841C48d88AC3', chainId: 56 }
         };
 
+        const paymentProviders = [
+            { name: 'Credit/Debit Card', provider: 'MoonPay/Simplex', fee: 4.5 },
+            { name: 'Apple Pay', provider: 'Apple', fee: 3.9 },
+            { name: 'Google Pay', provider: 'Google', fee: 3.9 },
+            { name: 'PayPal', provider: 'External Service', fee: 5.2 },
+            { name: 'Crypto Deposit', provider: 'Direct Transfer', fee: 0.5 },
+            { name: 'Revolut Pay', provider: 'Revolut', fee: 2.5 }
+        ];
+
         // --- APP STATE ---
-        let isRunning = false;
-        let priceSimInterval;
-        let connection;
-        let subscriptionId;
-        let provider;
-        let userAddress;
+        let isRunning = false, priceSimInterval, connection, subscriptionId, provider, userAddress;
         let selectedChain = 'solana';
-        
-        let state = {
-            walletBalance: 0.0,
-            pnl: 0.0,
-            trades: 0,
-            wins: 0,
-            positions: new Map()
-        };
+        let state = { walletBalance: 0.0, pnl: 0.0, trades: 0, wins: 0, positions: new Map() };
 
         // --- UI FUNCTIONS ---
         function formatNumber(num) { return (typeof num === 'number') ? num.toFixed(4) : '0.0000'; }
@@ -239,18 +259,7 @@
                 const pnlColor = pnl >= 0 ? 'text-green-400' : 'text-red-400';
                 const positionCard = document.createElement('div');
                 positionCard.className = 'bg-black/30 p-4 rounded-lg mb-4 border border-gray-800';
-                positionCard.innerHTML = `
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h4 class="font-bold text-white truncate" title="${address}">${pos.symbol}</h4>
-                            <span class="font-mono text-xs text-gray-500">${address.substring(0,10)}...</span>
-                        </div>
-                        <button data-address="${address}" class="sell-btn bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-3 rounded-md transition-transform transform hover:scale-105">Sell</button>
-                    </div>
-                    <div class="font-mono text-sm text-gray-400 space-y-1 mt-3">
-                        <div class="flex justify-between"><span>Value:</span> <span class="text-white">${formatNumber(pos.currentValue)} ${symbol}</span></div>
-                        <div class="flex justify-between"><span>PnL:</span> <span class="${pnlColor}">${pnl >= 0 ? '+' : ''}${formatNumber(pnl)} ${symbol} (${pnlPercent.toFixed(2)}%)</span></div>
-                    </div>`;
+                positionCard.innerHTML = `<div class="flex justify-between items-start"><div><h4 class="font-bold text-white truncate" title="${address}">${pos.symbol}</h4><span class="font-mono text-xs text-gray-500">${address.substring(0,10)}...</span></div><button data-address="${address}" class="sell-btn bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-3 rounded-md transition-transform transform hover:scale-105">Sell</button></div><div class="font-mono text-sm text-gray-400 space-y-1 mt-3"><div class="flex justify-between"><span>Value:</span> <span class="text-white">${formatNumber(pos.currentValue)} ${symbol}</span></div><div class="flex justify-between"><span>PnL:</span> <span class="${pnlColor}">${pnl >= 0 ? '+' : ''}${formatNumber(pnl)} ${symbol} (${pnlPercent.toFixed(2)}%)</span></div></div>`;
                 positionsContainer.appendChild(positionCard);
             }
         }
@@ -272,19 +281,13 @@
             const c = typeClasses[type] || typeClasses.system;
             entry.classList.add(c.bg, c.border);
             header = `<span class="text-xs font-bold px-2 py-1 rounded-full ${c.bg} ${c.text}">${c.tag}</span>`;
-            
             const symbol = chains[selectedChain].symbol;
             switch(type) {
                 case 'system': content = `<span class="font-semibold">${message}</span>`; break;
                 case 'wallet': content = `<span class="font-semibold">${message}</span><p class="text-xs text-gray-500 break-all mt-1">Address: ${data.address}</p>`; break;
-                case 'pair':
-                    content = `<p class="mb-2"><strong>New liquidity pool detected on ${chains[selectedChain].name}!</strong></p><p class="text-xs text-gray-500 break-all">Details: ${data.details.substring(0, 40)}...</p>`;
-                    break;
+                case 'pair': content = `<p class="mb-2"><strong>New liquidity pool detected on ${chains[selectedChain].name}!</strong></p><p class="text-xs text-gray-500 break-all">Details: ${data.details.substring(0, 40)}...</p>`; break;
                 case 'buy': content = `<p class="mb-1"><strong>Token:</strong> <span class="text-cyan-400">${data.symbol} (${data.address.substring(0,10)}...)</span></p><p><strong>Amount:</strong> ${formatNumber(data.amount)} ${symbol}</p>`; break;
-                case 'sell':
-                    const pnlColor = data.pnl >= 0 ? 'text-green-400' : 'text-red-400';
-                    content = `<p class="mb-1"><strong>Token:</strong> <span class="text-cyan-400">${data.symbol}</span></p><p><strong>Profit/Loss:</strong> <span class="${pnlColor}">${data.pnl >= 0 ? '+' : ''}${formatNumber(data.pnl)} ${symbol}</span></p>`;
-                    break;
+                case 'sell': const pnlColor = data.pnl >= 0 ? 'text-green-400' : 'text-red-400'; content = `<p class="mb-1"><strong>Token:</strong> <span class="text-cyan-400">${data.symbol}</span></p><p><strong>Profit/Loss:</strong> <span class="${pnlColor}">${data.pnl >= 0 ? '+' : ''}${formatNumber(data.pnl)} ${symbol}</span></p>`; break;
                 case 'error': content = `<span class="font-semibold text-red-400">${message}</span>`; break;
             }
             entry.innerHTML = `<div class="flex justify-between items-center mb-2">${header}<span class="text-xs text-gray-500">${timestamp}</span></div><div>${content}</div>`;
@@ -308,38 +311,78 @@
                 if (userAddress) {
                     toggleBtn.innerHTML = '🚀 Start Bot';
                     toggleBtn.classList.add('gradient-bg');
-                    toggleBtn.classList.remove('bg-gray-600', 'btn-disabled');
-                    toggleBtn.disabled = false;
                 } else {
                     toggleBtn.innerHTML = '🚀 Connect wallet to start';
                     toggleBtn.classList.add('bg-gray-600', 'btn-disabled');
-                    toggleBtn.classList.remove('gradient-bg');
                     toggleBtn.disabled = true;
                 }
             }
         }
         
+        // --- MODAL FUNCTIONS ---
+        function openBuyCryptoModal() {
+            if (!userAddress) {
+                logEntry("Connect your wallet to add funds.", "error");
+                return;
+            }
+            modalTitle.textContent = `Buy ${chains[selectedChain].symbol}`;
+            paymentOptionsContainer.innerHTML = '';
+            
+            const sortedProviders = [...paymentProviders].sort((a, b) => a.fee - b.fee);
+
+            sortedProviders.forEach(provider => {
+                const isBestValue = provider.fee === sortedProviders[0].fee;
+                const optionEl = document.createElement('div');
+                optionEl.className = `flex justify-between items-center bg-black/30 p-4 rounded-lg border cursor-pointer hover:border-cyan-500/50 ${isBestValue ? 'border-green-500/50' : 'border-gray-800'}`;
+                optionEl.innerHTML = `<div><h4 class="font-semibold text-white">${provider.name}</h4><p class="text-sm text-gray-400">Fee: ~${provider.fee}%</p></div> ${isBestValue ? '<span class="bg-green-500/20 text-green-300 text-xs font-bold px-2 py-1 rounded-full">Best Value</span>' : ''}`;
+                optionEl.addEventListener('click', () => openCheckoutModal(provider));
+                paymentOptionsContainer.appendChild(optionEl);
+            });
+
+            buyCryptoModal.classList.remove('hidden');
+        }
+
+        function closeBuyCryptoModal() { buyCryptoModal.classList.add('hidden'); }
+        
+        function openCheckoutModal(provider) {
+            closeBuyCryptoModal();
+            checkoutProvider.textContent = `via ${provider.name}`;
+            purchaseSymbol.textContent = chains[selectedChain].symbol;
+            purchaseAmountInput.value = '';
+            checkoutModal.classList.remove('hidden');
+        }
+
+        function closeCheckoutModal() { checkoutModal.classList.add('hidden'); }
+        
+        function handleConfirmPurchase() {
+            const amount = parseFloat(purchaseAmountInput.value);
+            if (isNaN(amount) || amount <= 0) {
+                logEntry("Invalid purchase amount entered.", "error");
+                return;
+            }
+            state.walletBalance += amount;
+            logEntry(`Successfully added ${formatNumber(amount)} ${chains[selectedChain].symbol} to your balance.`, 'wallet', { address: userAddress });
+            updateStats();
+            closeCheckoutModal();
+        }
+
         // --- BOT LOGIC ---
         function simulatePriceChangesAndSells() {
             if (!isRunning || state.positions.size === 0) return;
             const positionsToSell = [];
             for (const [address, pos] of state.positions.entries()) {
-                pos.currentValue *= (1 + (Math.random() - 0.48) * 0.2); // Price fluctuation
+                pos.currentValue *= (1 + (Math.random() - 0.48) * 0.2);
                 const pnl = pos.currentValue - pos.buyValue;
-                if (pnl > pos.buyValue * 0.5 || pnl < -pos.buyValue * 0.25) { // Take profit / Stop loss
-                    positionsToSell.push(address);
-                }
+                if (pnl > pos.buyValue * 0.5 || pnl < -pos.buyValue * 0.25) { positionsToSell.push(address); }
             }
-            if (positionsToSell.length > 0) {
-                positionsToSell.forEach(address => manualSell(address, true)); // Pass true for auto-sell
-            }
-            renderPositions(); // Render after price updates
+            if (positionsToSell.length > 0) { positionsToSell.forEach(address => manualSell(address, true)); }
+            renderPositions();
         }
         
         function simulateBuy(details) {
-            const buyAmount = 0.05; // Universal buy amount for simulation
+            const buyAmount = 0.05;
             if (state.walletBalance >= buyAmount) {
-                const placeholderAddress = details;
+                const placeholderAddress = details.substring(0, 44);
                 const symbol = chains[selectedChain].symbol + "COIN" + Math.floor(Math.random() * 9000 + 1000);
                 state.walletBalance -= buyAmount;
                 state.positions.set(placeholderAddress, { symbol, buyValue: buyAmount, currentValue: buyAmount });
@@ -355,40 +398,25 @@
             updateBotStatus(true);
             logEntry(`Starting bot on ${chainConfig.name}...`, 'system');
             try {
-                connectionStatusEl.textContent = 'Connecting to blockchain...';
+                connectionStatusEl.textContent = 'Connecting...';
                 connectionStatusEl.className = 'text-lg font-medium text-yellow-400';
-                
                 if (chainConfig.type === 'solana') {
                     connection = new solanaWeb3.Connection(chainConfig.wsUrl, 'confirmed');
-                    subscriptionId = connection.onLogs(
-                        new solanaWeb3.PublicKey(chainConfig.factoryAddress),
-                        (logInfo) => {
-                             if (logInfo.logs.join(' ').includes("initialize2")) {
-                                logEntry('', 'pair', { details: logInfo.signature });
-                                if (Math.random() < 0.1) simulateBuy(logInfo.signature);
-                            }
-                        },
-                        'confirmed'
-                    );
+                    subscriptionId = connection.onLogs(new solanaWeb3.PublicKey(chainConfig.factoryAddress), (logInfo) => { if (logInfo.logs.join(' ').includes("initialize2")) { logEntry('', 'pair', { details: logInfo.signature }); if (Math.random() < 0.1) simulateBuy(logInfo.signature); }}, 'confirmed');
                 } else if (chainConfig.type === 'evm') {
                     connection = new ethers.providers.WebSocketProvider(chainConfig.wsUrl);
                     const factoryContract = new ethers.Contract(chainConfig.factoryAddress, ["event PairCreated(address indexed token0, address indexed token1, address pair, uint)"], connection);
-                    factoryContract.on("PairCreated", (token0, token1, pairAddress) => {
-                        logEntry('', 'pair', { details: pairAddress });
-                        if (Math.random() < 0.1) simulateBuy(pairAddress);
-                    });
-                    subscriptionId = factoryContract; // Store contract to remove listener later
+                    factoryContract.on("PairCreated", (token0, token1, pairAddress) => { logEntry('', 'pair', { details: pairAddress }); if (Math.random() < 0.1) simulateBuy(pairAddress); });
+                    subscriptionId = factoryContract;
                 }
-
                 logEntry(`Connected to ${chainConfig.name} Mainnet`, 'system');
-                connectionStatusEl.textContent = 'Connected to Blockchain';
+                connectionStatusEl.textContent = 'Connected';
                 connectionStatusEl.className = 'text-lg font-medium text-green-400';
                 priceSimInterval = setInterval(simulatePriceChangesAndSells, 5000);
-
             } catch(e) {
                 console.error("Bot start error:", e);
-                logEntry(`Error connecting to blockchain: ${e.message}`, 'error');
-                connectionStatusEl.textContent = 'Connection Error';
+                logEntry(`Error connecting: ${e.message}`, 'error');
+                connectionStatusEl.textContent = 'Error';
                 connectionStatusEl.className = 'text-lg font-medium text-red-400';
                 updateBotStatus(false);
             }
@@ -396,14 +424,10 @@
 
         async function stopBot() {
             if (!isRunning) return;
-            logEntry('Bot has been stopped.', 'system');
+            logEntry('Bot stopped.', 'system');
             if (subscriptionId) {
-                if (selectedChain === 'solana' && connection) {
-                    await connection.removeOnLogsListener(subscriptionId);
-                } else if (chains[selectedChain].type === 'evm') {
-                    subscriptionId.removeAllListeners();
-                    if(connection && connection.destroy) connection.destroy(); // Ethers ws provider
-                }
+                if (selectedChain === 'solana' && connection) { await connection.removeOnLogsListener(subscriptionId); } 
+                else if (chains[selectedChain].type === 'evm') { subscriptionId.removeAllListeners(); if(connection && connection.destroy) connection.destroy(); }
             }
             clearInterval(priceSimInterval);
             connection = subscriptionId = priceSimInterval = null;
@@ -412,64 +436,39 @@
             updateBotStatus(false);
         }
 
-        function toggleBot() {
-            if (isRunning) stopBot(); else startBot();
-        }
+        function toggleBot() { if (isRunning) stopBot(); else startBot(); }
         
-        // --- MANUAL TRADING ---
         function handleManualBuy() {
-            if (!userAddress) {
-                logEntry('Connect your wallet first to trade.', 'error');
-                return;
-            }
+            if (!userAddress) { logEntry('Connect wallet first.', 'error'); return; }
             const address = tokenAddressInput.value.trim();
             const amount = parseFloat(buyAmountInput.value);
-
             if (!address) { logEntry('Token address is required.', 'error'); return; }
-            if (isNaN(amount) || amount <= 0) { logEntry('Please enter a valid amount.', 'error'); return; }
+            if (isNaN(amount) || amount <= 0) { logEntry('Invalid amount.', 'error'); return; }
             if (amount > state.walletBalance) { logEntry('Insufficient balance.', 'error'); return; }
-            
             const symbol = "Manual-" + address.substring(0, 6);
             state.walletBalance -= amount;
             state.positions.set(address, { symbol, buyValue: amount, currentValue: amount });
-            
             logEntry(`Manually bought ${symbol}`, 'buy', { symbol, address: address, amount: amount });
-            
-            tokenAddressInput.value = '';
-            buyAmountInput.value = '';
-
-            updateStats();
-            renderPositions();
+            tokenAddressInput.value = ''; buyAmountInput.value = '';
+            updateStats(); renderPositions();
         }
 
         function manualSell(address, isAutoSell = false) {
              if (!state.positions.has(address)) return;
-
             const pos = state.positions.get(address);
             const pnl = pos.currentValue - pos.buyValue;
-
             state.walletBalance += pos.currentValue;
             state.pnl += pnl;
             state.trades++;
             if (pnl > 0) state.wins++;
-            
-            const sellMsg = isAutoSell ? `Auto-sold ${pos.symbol}` : `Manually sold ${pos.symbol}`;
-            logEntry(sellMsg, 'sell', { symbol: pos.symbol, pnl: pnl });
-
+            logEntry(isAutoSell ? `Auto-sold ${pos.symbol}` : `Manually sold ${pos.symbol}`, 'sell', { symbol: pos.symbol, pnl: pnl });
             state.positions.delete(address);
-
-            updateStats();
-            renderPositions();
+            updateStats(); renderPositions();
         }
 
-
-        // --- WALLET LOGIC ---
         function getProvider() {
-            if (selectedChain === 'solana') {
-                 return ('solana' in window && window.solana?.isPhantom) ? window.solana : null;
-            } else if (chains[selectedChain].type === 'evm') {
-                return ('ethereum' in window) ? window.ethereum : null;
-            }
+            if (selectedChain === 'solana') return ('solana' in window && window.solana?.isPhantom) ? window.solana : null;
+            else if (chains[selectedChain].type === 'evm') return ('ethereum' in window) ? window.ethereum : null;
             return null;
         }
 
@@ -477,7 +476,7 @@
             provider = getProvider();
             if (!provider) {
                 const walletName = selectedChain === 'solana' ? 'Phantom' : 'MetaMask';
-                logEntry(`${walletName} wallet not found. Please install it.`, 'error');
+                logEntry(`${walletName} not found. Please install it.`, 'error');
                 const installUrl = selectedChain === 'solana' ? 'https://phantom.app/' : 'https://metamask.io/';
                 setTimeout(() => window.open(installUrl, "_blank"), 1000);
                 return;
@@ -486,22 +485,14 @@
                 if (selectedChain === 'solana') {
                     const resp = await provider.connect({ onlyIfTrusted: false });
                     userAddress = resp.publicKey.toString();
-                } else { // EVM
+                } else {
                     const accounts = await provider.request({ method: 'eth_requestAccounts' });
                     userAddress = accounts[0];
                     const networkId = await provider.request({ method: 'net_version' });
-                    if (parseInt(networkId) !== chains[selectedChain].chainId) {
-                        logEntry(`Please switch to ${chains[selectedChain].name} in MetaMask.`, 'error');
-                        userAddress = null; // Prevent further actions
-                        return;
-                    }
+                    if (parseInt(networkId) !== chains[selectedChain].chainId) { logEntry(`Please switch to ${chains[selectedChain].name} in MetaMask.`, 'error'); userAddress = null; return; }
                 }
-                await updateWalletInfo();
-                setupWalletListeners();
-            } catch (err) {
-                console.error("Wallet connection error:", err);
-                logEntry(`Wallet connection failed: ${err.message}`, 'error');
-            }
+                await updateWalletInfo(); setupWalletListeners();
+            } catch (err) { console.error("Wallet connection error:", err); logEntry(`Connection failed: ${err.message}`, 'error'); }
         }
 
         async function updateWalletInfo() {
@@ -512,76 +503,51 @@
                      const tempConnection = new solanaWeb3.Connection(chainConfig.nodeUrl, 'confirmed');
                      const balance = await tempConnection.getBalance(new solanaWeb3.PublicKey(userAddress));
                      state.walletBalance = balance / solanaWeb3.LAMPORTS_PER_SOL;
-                } else { // EVM
+                } else {
                     const tempProvider = new ethers.providers.JsonRpcProvider(chainConfig.nodeUrl);
                     const balance = await tempProvider.getBalance(userAddress);
                     state.walletBalance = parseFloat(ethers.utils.formatEther(balance));
                 }
             } catch (error) {
-                console.warn("Could not fetch balance (likely 0):", error);
+                console.warn("Could not fetch balance:", error);
                 logEntry("Could not fetch balance. Assuming 0.", 'wallet', { address: userAddress });
                 state.walletBalance = 0.0;
             }
             connectWalletBtn.textContent = `${userAddress.substring(0, 4)}...${userAddress.substring(userAddress.length - 4)}`;
             connectWalletBtn.className = 'bg-gray-800 text-gray-300 font-mono py-2 px-4 rounded-lg border border-gray-700';
-            logEntry('Wallet connected successfully.', 'wallet', {address: userAddress});
-            updateStats();
-            updateBotStatus(false);
+            logEntry('Wallet connected.', 'wallet', {address: userAddress});
+            updateStats(); updateBotStatus(false);
         }
         
         function setupWalletListeners() {
             if(!provider) return;
             const handleDisconnect = () => {
                 logEntry('Wallet disconnected.', 'error');
-                if (provider && provider.removeAllListeners) provider.removeAllListeners();
-                userAddress = null;
-                provider = null;
+                if (provider?.removeAllListeners) provider.removeAllListeners();
+                userAddress = provider = null;
                 stopBot();
                 connectWalletBtn.textContent = 'Connect Wallet';
                 connectWalletBtn.className = 'gradient-bg text-white font-bold py-2 px-4 rounded-lg shadow-md transform hover:scale-105';
-                updateBotStatus(false);
-                updateStats();
+                updateBotStatus(false); updateStats();
             }
             if (selectedChain === 'solana') {
                  provider.on('disconnect', handleDisconnect);
-                 provider.on('accountChanged', (publicKey) => {
-                     if(publicKey) {
-                        userAddress = publicKey.toString();
-                        logEntry('Wallet account changed.', 'wallet', {address: userAddress});
-                        updateWalletInfo();
-                     } else {
-                         handleDisconnect();
-                     }
-                 });
-            } else { // EVM
-                provider.on('accountsChanged', (accounts) => {
-                    if (accounts.length > 0) {
-                        userAddress = accounts[0];
-                        logEntry('Wallet account changed.', 'wallet', {address: userAddress});
-                        updateWalletInfo();
-                    } else {
-                        handleDisconnect();
-                    }
-                });
-                provider.on('chainChanged', () => {
-                    logEntry('Network changed. Please reconnect wallet.', 'system');
-                    handleDisconnect();
-                });
+                 provider.on('accountChanged', (pk) => { if(pk) { userAddress = pk.toString(); logEntry('Account changed.', 'wallet', {address: userAddress}); updateWalletInfo(); } else { handleDisconnect(); }});
+            } else {
+                provider.on('accountsChanged', (accounts) => { if (accounts.length > 0) { userAddress = accounts[0]; logEntry('Account changed.', 'wallet', {address: userAddress}); updateWalletInfo(); } else { handleDisconnect(); }});
+                provider.on('chainChanged', () => { logEntry('Network changed. Reconnect wallet.', 'system'); handleDisconnect(); });
             }
         }
         
         function resetState() {
             stopBot();
-            if (provider && provider.removeAllListeners) provider.removeAllListeners();
-            userAddress = null;
-            provider = null;
+            if (provider?.removeAllListeners) provider.removeAllListeners();
+            userAddress = provider = null;
             state = { walletBalance: 0.0, pnl: 0.0, trades: 0, wins: 0, positions: new Map() };
             logContainer.innerHTML = '<div class="text-center text-gray-500 pt-10">Log is empty. Connect wallet and start the bot.</div>';
             connectWalletBtn.textContent = 'Connect Wallet';
             connectWalletBtn.className = 'gradient-bg text-white font-bold py-2 px-4 rounded-lg shadow-md transform hover:scale-105';
-            updateBotStatus(false);
-            updateStats();
-            renderPositions();
+            updateBotStatus(false); updateStats(); renderPositions();
         }
 
         // --- INITIALIZATION ---
@@ -589,42 +555,25 @@
             toggleBtn.addEventListener('click', toggleBot);
             connectWalletBtn.addEventListener('click', connectWallet);
             manualBuyBtn.addEventListener('click', handleManualBuy);
+            walletBalanceCard.addEventListener('click', openBuyCryptoModal);
+            closeModalBtn.addEventListener('click', closeBuyCryptoModal);
+            buyCryptoModal.addEventListener('click', (e) => { if (e.target === buyCryptoModal) closeBuyCryptoModal(); });
+            closeCheckoutBtn.addEventListener('click', closeCheckoutModal);
+            checkoutModal.addEventListener('click', (e) => { if (e.target === checkoutModal) closeCheckoutModal(); });
+            confirmPurchaseBtn.addEventListener('click', handleConfirmPurchase);
 
-            positionsContainer.addEventListener('click', (e) => {
-                if(e.target.classList.contains('sell-btn')) {
-                    const address = e.target.dataset.address;
-                    manualSell(address);
-                }
-            });
+            positionsContainer.addEventListener('click', (e) => { if(e.target.classList.contains('sell-btn')) { manualSell(e.target.dataset.address); }});
 
-            logTab.addEventListener('click', () => {
-                logTab.classList.add('active');
-                tradingTab.classList.remove('active');
-                logContainer.classList.remove('hidden');
-                tradingContainer.classList.add('hidden');
-            });
-
-            tradingTab.addEventListener('click', () => {
-                tradingTab.classList.add('active');
-                logTab.classList.remove('active');
-                tradingContainer.classList.remove('hidden');
-                logContainer.classList.add('hidden');
-            });
+            logTab.addEventListener('click', () => { logTab.classList.add('active'); tradingTab.classList.remove('active'); logContainer.classList.remove('hidden'); tradingContainer.classList.add('hidden'); });
+            tradingTab.addEventListener('click', () => { tradingTab.classList.add('active'); logTab.classList.remove('active'); tradingContainer.classList.remove('hidden'); logContainer.classList.add('hidden'); });
 
             networkSelector.addEventListener('click', (e) => {
                 if(e.target.tagName === 'BUTTON' && !e.target.disabled) {
                     const newChain = e.target.dataset.chain;
-                    if (newChain !== selectedChain) {
-                        selectedChain = newChain;
-                        networkSelector.querySelector('.active').classList.remove('active');
-                        e.target.classList.add('active');
-                        logEntry(`Network switched to ${chains[selectedChain].name}.`, 'system');
-                        resetState();
-                    }
+                    if (newChain !== selectedChain) { selectedChain = newChain; networkSelector.querySelector('.active').classList.remove('active'); e.target.classList.add('active'); logEntry(`Switched to ${chains[selectedChain].name}.`, 'system'); resetState(); }
                 }
             });
-            updateStats();
-            renderPositions();
+            updateStats(); renderPositions();
         });
     </script>
 </body>
